@@ -531,137 +531,11 @@ function App() {
     }
   };
 
-  // 匯出 CSV 功能
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const exportToCsv = () => {
-    if (savedRecords.length === 0) {
-      alert("沒有資料可以匯出！");
-      return;
-    }
-
-    const allHeaders = new Set<string>();
-    savedRecords.forEach((record) => {
-      allHeaders.add("id");
-      allHeaders.add("timestamp");
-      allHeaders.add("type");
-      if (record.formData) {
-        Object.keys(record.formData).forEach((key) => allHeaders.add(key));
-      }
-    });
-
-    const preferredOrder = [
-      "id",
-      "timestamp",
-      "type",
-      "propertyName",
-      "area",
-      "district",
-      "communityName",
-      "address",
-      "floor",
-      "totalAmount",
-      "totalPing",
-      "unitPrice",
-      "mainBuildingPing",
-      "accessoryBuildingPing",
-      "indoorUsablePing",
-      "publicAreaRatio",
-      "carParkType",
-      "carParkFloor",
-      "carParkPing",
-      "carParkPrice",
-      "buildingAge",
-      "mrtStation",
-      "mrtDistance",
-      "source",
-      "otherSource",
-      "otherDistrict",
-      "type",
-      "layoutRooms",
-      "layoutLivingRooms",
-      "layoutBathrooms",
-      "hasPXMart",
-      "notes",
-      "rating_採光",
-      "rating_生活機能",
-      "rating_交通",
-      "rating_價格滿意度",
-      "rating_未來發展潛力",
-      "totalRating",
-      "reason",
-    ];
-
-    const finalHeaders = preferredOrder
-      .filter((header) => allHeaders.has(header))
-      .concat(
-        Array.from(allHeaders).filter(
-          (header) => !preferredOrder.includes(header)
-        )
-      );
-
-    let csvContent =
-      finalHeaders.map((header) => `"${header}"`).join(",") + "\n";
-
-    savedRecords.forEach((record) => {
-      const row = finalHeaders
-        .map((header) => {
-          let value;
-          if (header === "id" || header === "timestamp" || header === "type") {
-            value = record[header];
-          } else {
-            value = record.formData[header];
-          }
-
-          if (value === null || value === undefined || value === "") {
-            value = "";
-          } else if (typeof value === "object") {
-            value = JSON.stringify(value);
-          } else {
-            value = String(value);
-          }
-
-          if (typeof value === "string") {
-            value = value.replace(/"/g, '""');
-            if (
-              value.includes(",") ||
-              value.includes("\n") ||
-              value.includes('"')
-            ) {
-              value = `"${value}"`;
-            }
-          }
-          return value;
-        })
-        .join(",");
-      csvContent += row + "\n";
-    });
-
-    const blob = new Blob([csvContent], {
-      type: "text/csv;charset=utf-8;\uFEFF",
-    });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `房屋物件記錄_${new Date().toLocaleDateString("zh-TW")}.csv`
-      );
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else {
-      alert("您的瀏覽器不支持自動下載，請嘗試手動儲存。");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          買房便利通 2025 V1.0版
+          買房便利通 2025 (v1.0版)
         </h1>
         {/* 新增的署名行 */}
         <p className="text-sm text-gray-500 text-center mb-6">
@@ -670,7 +544,9 @@ function App() {
         {/* 初始判斷區塊 */}
         {isDesignatedCommunity === null && (
           <div className="flex flex-col items-center justify-center space-y-4">
-            <p className="text-lg text-gray-700">這個物件是指定社區的嗎？</p>
+            <p className="text-lg text-gray-700">
+              要輸入的物件是指定社區的嗎？
+            </p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full justify-center">
               <button
                 className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -1092,12 +968,6 @@ function App() {
             onClick={() => setShowRecords(!showRecords)}
           >
             {showRecords ? "隱藏記錄" : "顯示記錄"} ({savedRecords.length} 筆)
-          </button>
-          <button
-            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-            onClick={() => setShowRecords(!showRecords)}
-          >
-            匯出 CSV
           </button>
         </div>
 
