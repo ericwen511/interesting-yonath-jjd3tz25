@@ -34,7 +34,6 @@ const districtsByArea: { [key: string]: string[] } = {
     "林口區",
     "深坑區",
     "淡水區",
-    "其他區",
   ],
 };
 
