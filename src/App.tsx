@@ -33,7 +33,7 @@ const districtsByArea: { [key: string]: string[] } = {
     "鶯歌區",
     "林口區",
     "深坑區",
-    "其他區",
+    "淡水區",
   ],
 };
 
@@ -895,9 +895,7 @@ function App() {
             </div>
 
             {/* 手動輸入區塊 */}
-            <h3 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">
-              手動輸入
-            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputGroup
                 label="地址"
