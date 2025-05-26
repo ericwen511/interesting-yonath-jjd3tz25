@@ -1087,14 +1087,14 @@ function App() {
         {/* 顯示記錄與匯出按鈕 */}
         <div className="mt-8 pt-8 border-t border-gray-200 text-center space-x-4">
           <button
-            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 w-full sm:w-auto"
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             onClick={() => setShowRecords(!showRecords)}
           >
             {showRecords ? "隱藏記錄" : "顯示記錄"} ({savedRecords.length} 筆)
           </button>
           <button
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
-            onClick={exportToCsv}
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            onClick={() => setShowRecords(!showRecords)}
           >
             匯出 CSV
           </button>
