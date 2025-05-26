@@ -544,7 +544,9 @@ function App() {
         {/* 初始判斷區塊 */}
         {isDesignatedCommunity === null && (
           <div className="flex flex-col items-center justify-center space-y-4">
-            <p className="text-lg text-gray-700">這個物件是指定社區的嗎？</p>
+            <p className="text-lg text-gray-700">
+              要輸入的物件是指定社區的嗎？
+            </p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full justify-center">
               <button
                 className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
