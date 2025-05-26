@@ -532,6 +532,7 @@ function App() {
   };
 
   // 匯出 CSV 功能
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const exportToCsv = () => {
     if (savedRecords.length === 0) {
       alert("沒有資料可以匯出！");
