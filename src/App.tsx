@@ -532,6 +532,7 @@ function App() {
   };
 
   // 匯出 CSV 功能
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const exportToCsv = () => {
     if (savedRecords.length === 0) {
       alert("沒有資料可以匯出！");
@@ -660,7 +661,7 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          買房便利通 2025版xx
+          買房便利通 2025 V1.0版
         </h1>
         {/* 新增的署名行 */}
         <p className="text-sm text-gray-500 text-center mb-6">
@@ -1087,14 +1088,14 @@ function App() {
         {/* 顯示記錄與匯出按鈕 */}
         <div className="mt-8 pt-8 border-t border-gray-200 text-center space-x-4">
           <button
-            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 w-full sm:w-auto"
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             onClick={() => setShowRecords(!showRecords)}
           >
             {showRecords ? "隱藏記錄" : "顯示記錄"} ({savedRecords.length} 筆)
           </button>
           <button
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
-            onClick={exportToCsv}
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            onClick={() => setShowRecords(!showRecords)}
           >
             匯出 CSV
           </button>
