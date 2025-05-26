@@ -660,7 +660,7 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          買房便利通 2025版xx
+          買房便利通 2025版
         </h1>
         {/* 新增的署名行 */}
         <p className="text-sm text-gray-500 text-center mb-6">
