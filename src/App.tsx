@@ -660,9 +660,12 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          房屋物件資料輸入
+          買房便利通
         </h1>
-
+        {/* 新增的署名行 */}
+        <p className="text-sm text-gray-500 text-center mb-6">
+          Made by Eric Wen
+        </p>
         {/* 初始判斷區塊 */}
         {isDesignatedCommunity === null && (
           <div className="flex flex-col items-center justify-center space-y-4">
