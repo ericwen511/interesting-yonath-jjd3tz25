@@ -658,7 +658,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+      <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
           買房便利通
         </h1>
@@ -670,7 +670,7 @@ function App() {
         {isDesignatedCommunity === null && (
           <div className="flex flex-col items-center justify-center space-y-4">
             <p className="text-lg text-gray-700">這個物件是指定社區的嗎？</p>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full justify-center">
               <button
                 className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 onClick={() => setIsDesignatedCommunity(true)}
@@ -738,22 +738,22 @@ function App() {
             </div>
 
             {/* 提交與返回按鈕 */}
-            <div className="flex justify-between mt-6">
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 justify-between">
               <button
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
                 onClick={handleSubmit}
               >
                 {editingRecordId ? "更新記錄" : "提交並儲存"}
               </button>
               <button
-                className="px-6 py-3 bg-gray-500 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                className="px-6 py-3 bg-gray-500 text-white font-semibold rounded-md shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 w-full sm:w-auto"
                 onClick={() => resetForm(false)} // 不回到初始選擇頁面，只清空表單
               >
                 {editingRecordId ? "取消編輯並清空" : "清空表單"}
               </button>
               {editingRecordId === null && ( // 只有在非編輯模式下顯示切換回選擇頁的按鈕
                 <button
-                  className="px-6 py-3 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2"
+                  className="px-6 py-3 bg-gray-700 text-white font-semibold rounded-md shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2 w-full sm:w-auto"
                   onClick={() => resetForm(true)} // 返回到初始選擇頁面
                 >
                   切換物件類型
@@ -1087,13 +1087,13 @@ function App() {
         {/* 顯示記錄與匯出按鈕 */}
         <div className="mt-8 pt-8 border-t border-gray-200 text-center space-x-4">
           <button
-            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 w-full sm:w-auto"
             onClick={() => setShowRecords(!showRecords)}
           >
             {showRecords ? "隱藏記錄" : "顯示記錄"} ({savedRecords.length} 筆)
           </button>
           <button
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto"
             onClick={exportToCsv}
           >
             匯出 CSV
