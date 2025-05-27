@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { exportToCsv, importFromCsv } from "./utils/csv"; // 新增匯入
 
 // 定義所有區域和其下的行政區選項
 const areas = ["台北市", "新北市"];
@@ -34,6 +35,7 @@ const districtsByArea: { [key: string]: string[] } = {
     "林口區",
     "深坑區",
     "淡水區",
+    "其他區", // Added for otherDistrict
   ],
 };
 
@@ -170,9 +172,9 @@ const fieldNameMap: { [key: string]: string } = {
   propertyName: "物件名稱",
   area: "主要都市",
   district: "行政區",
-  // otherDistrict: '其他行政區', // 不顯示，所以不需要在這裡
+  otherDistrict: "其他行政區", // 這裡需要包含，因為在匯出時可能需要
   source: "物件來源",
-  // otherSource: '其他來源', // 不顯示，所以不需要在這裡
+  otherSource: "其他來源", // 這裡需要包含，因為在匯出時可能需要
   type: "房屋種類",
   carParkType: "車位形式",
   carParkFloor: "車位樓層",
@@ -205,7 +207,7 @@ const fieldNameMap: { [key: string]: string } = {
   reason: "獲選的原因",
 };
 
-// 排除顯示的欄位
+// 排除顯示的欄位 (僅用於 UI 顯示，CSV 匯出會包含這些欄位)
 const fieldsToExclude = ["otherDistrict", "otherSource"];
 
 function App() {
@@ -233,27 +235,27 @@ function App() {
     type: "",
     carParkType: "",
     carParkFloor: "",
-    layoutRooms: "",
-    layoutLivingRooms: "",
-    layoutBathrooms: "",
+    layoutRooms: "" as "" | number, // Explicitly allow number or ""
+    layoutLivingRooms: "" as "" | number,
+    layoutBathrooms: "" as "" | number,
     hasPXMart: "" as string,
     address: "",
     floor: "",
-    totalPing: "",
-    mainBuildingPing: "",
-    accessoryBuildingPing: "",
-    carParkPing: "",
-    totalAmount: "",
-    carParkPrice: "",
-    buildingAge: "",
+    totalPing: "" as "" | number,
+    mainBuildingPing: "" as "" | number,
+    accessoryBuildingPing: "" as "" | number,
+    carParkPing: "" as "" | number,
+    totalAmount: "" as "" | number,
+    carParkPrice: "" as "" | number,
+    buildingAge: "" as "" | number,
     mrtStation: "",
-    mrtDistance: "",
+    mrtDistance: "" as "" | number,
     notes: "",
-    rating_採光: "",
-    rating_生活機能: "",
-    rating_交通: "",
-    rating_價格滿意度: "",
-    rating_未來發展潛力: "",
+    rating_採光: "" as "" | string,
+    rating_生活機能: "" as "" | string,
+    rating_交通: "" as "" | string,
+    rating_價格滿意度: "" as "" | string,
+    rating_未來發展潛力: "" as "" | string,
   };
 
   const [generalPropertyForm, setGeneralPropertyForm] = useState(
@@ -273,6 +275,9 @@ function App() {
   });
   const [showRecords, setShowRecords] = useState<boolean>(false);
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null); // 用於追蹤正在編輯的記錄 ID
+
+  // 檔案輸入框的引用，用於觸發點擊
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 將資料存入 localStorage 的副作用
   useEffect(() => {
@@ -298,7 +303,6 @@ function App() {
     >
   ) => {
     const { name, value } = e.target;
-
     if (name.startsWith("rating_")) {
       setGeneralPropertyForm((prev) => ({
         ...prev,
@@ -322,9 +326,11 @@ function App() {
 
   // --- 自動計算邏輯 ---
   useEffect(() => {
-    const mainBuilding = parseFloat(generalPropertyForm.mainBuildingPing);
+    const mainBuilding = parseFloat(
+      generalPropertyForm.mainBuildingPing as string
+    );
     const accessoryBuilding = parseFloat(
-      generalPropertyForm.accessoryBuildingPing
+      generalPropertyForm.accessoryBuildingPing as string
     );
     setIndoorUsablePing(
       !isNaN(mainBuilding) && !isNaN(accessoryBuilding)
@@ -337,10 +343,10 @@ function App() {
   ]);
 
   useEffect(() => {
-    const totalAmount = parseFloat(generalPropertyForm.totalAmount);
-    const totalPing = parseFloat(generalPropertyForm.totalPing);
-    const carParkPrice = parseFloat(generalPropertyForm.carParkPrice);
-    const carParkPing = parseFloat(generalPropertyForm.carParkPing);
+    const totalAmount = parseFloat(generalPropertyForm.totalAmount as string);
+    const totalPing = parseFloat(generalPropertyForm.totalPing as string);
+    const carParkPrice = parseFloat(generalPropertyForm.carParkPrice as string);
+    const carParkPing = parseFloat(generalPropertyForm.carParkPing as string);
 
     if (!isNaN(totalAmount) && !isNaN(totalPing) && totalPing > 0) {
       const actualTotalAmount = isNaN(carParkPrice)
@@ -365,12 +371,14 @@ function App() {
   ]);
 
   useEffect(() => {
-    const mainBuilding = parseFloat(generalPropertyForm.mainBuildingPing);
-    const accessoryBuilding = parseFloat(
-      generalPropertyForm.accessoryBuildingPing
+    const mainBuilding = parseFloat(
+      generalPropertyForm.mainBuildingPing as string
     );
-    const totalPing = parseFloat(generalPropertyForm.totalPing);
-    const carParkPing = parseFloat(generalPropertyForm.carParkPing);
+    const accessoryBuilding = parseFloat(
+      generalPropertyForm.accessoryBuildingPing as string
+    );
+    const totalPing = parseFloat(generalPropertyForm.totalPing as string);
+    const carParkPing = parseFloat(generalPropertyForm.carParkPing as string);
 
     if (
       !isNaN(mainBuilding) &&
@@ -531,11 +539,48 @@ function App() {
     }
   };
 
+  // 處理 CSV 匯出
+  const handleExportCsv = useCallback(() => {
+    exportToCsv(savedRecords);
+  }, [savedRecords]);
+
+  // 處理 CSV 匯入
+  const handleImportCsv = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        try {
+          const importedRecords = await importFromCsv(file);
+          // 合併現有記錄和新匯入的記錄，確保 ID 唯一
+          const existingIds = new Set(savedRecords.map((rec) => rec.id));
+          const newUniqueRecords = importedRecords.filter(
+            (rec) => !existingIds.has(rec.id)
+          );
+
+          if (newUniqueRecords.length > 0) {
+            setSavedRecords((prev) => [...prev, ...newUniqueRecords]);
+            alert(`成功匯入 ${newUniqueRecords.length} 筆新記錄！`);
+          } else {
+            alert("沒有新的記錄被匯入（可能已存在重複的記錄）。");
+          }
+        } catch (error) {
+          alert(`匯入失敗: ${(error as Error).message}`);
+          console.error("匯入 CSV 時發生錯誤:", error);
+        }
+      }
+      // Reset file input to allow re-importing the same file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [savedRecords]
+  );
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          買房便利通 2025 (v1.0版)
+          買房便利通 (v2.0版)
         </h1>
         {/* 新增的署名行 */}
         <p className="text-sm text-gray-500 text-center mb-6">
@@ -961,13 +1006,32 @@ function App() {
           </div>
         )}
 
-        {/* 顯示記錄與匯出按鈕 */}
+        {/* 顯示記錄與匯出/匯入按鈕 */}
         <div className="mt-8 pt-8 border-t border-gray-200 text-center space-x-4">
           <button
             className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             onClick={() => setShowRecords(!showRecords)}
           >
             {showRecords ? "隱藏記錄" : "顯示記錄"} ({savedRecords.length} 筆)
+          </button>
+          <button
+            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            onClick={handleExportCsv}
+          >
+            匯出記錄為 CSV
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportCsv}
+            accept=".csv"
+            style={{ display: "none" }} // 隱藏原生檔案輸入框
+          />
+          <button
+            className="px-6 py-3 bg-teal-600 text-white font-semibold rounded-md shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+            onClick={() => fileInputRef.current?.click()} // 點擊按鈕觸發檔案輸入框
+          >
+            從 CSV 匯入記錄
           </button>
         </div>
 
@@ -999,7 +1063,8 @@ function App() {
                           <br />
                           地址: {record.formData.address || "N/A"}
                           <br />
-                          總坪數: {record.formData.totalPing || "N/A"} 坪<br />
+                          總坪數: {record.formData.totalPing || "N/A"} 坪
+                          <br />
                           總金額: {record.formData.totalAmount || "N/A"} 萬元
                           <br />
                           單價:{" "}
