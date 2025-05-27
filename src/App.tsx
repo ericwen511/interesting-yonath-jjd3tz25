@@ -9,21 +9,21 @@ interface GeneralPropertyFormType {
   type: string;
   carParkType: string;
   carParkFloor: string;
-  layoutRooms: "" | number;
-  layoutLivingRooms: "" | number;
-  layoutBathrooms: "" | number;
+  layoutRooms: "" | string;
+  layoutLivingRooms: "" | string;
+  layoutBathrooms: "" | string;
   hasPXMart: string;
   address: string;
   floor: string;
-  totalPing: "" | number;
-  mainBuildingPing: "" | number;
-  accessoryBuildingPing: "" | number;
-  carParkPing: "" | number;
-  totalAmount: "" | number;
-  carParkPrice: "" | number;
-  buildingAge: "" | number;
+  totalPing: "" | string;
+  mainBuildingPing: "" | string;
+  accessoryBuildingPing: "" | string;
+  carParkPing: "" | string;
+  totalAmount: "" | string;
+  carParkPrice: "" | string;
+  buildingAge: "" | string;
   mrtStation: string;
-  mrtDistance: "" | number;
+  mrtDistance: "" | string;
   notes: string;
   rating_採光: "" | string;
   rating_生活機能: "" | string;
@@ -161,7 +161,7 @@ const InputGroup = ({
       <select
         id={name}
         name={name}
-        value={value === null ? "" : value.toString()}
+        value={value === null ? "" : String(value)}
         onChange={onChange}
         className={commonSelectClasses}
       >
@@ -339,7 +339,7 @@ function App() {
     const key = name as keyof GeneralPropertyFormType;
 
     setGeneralPropertyForm((prev) => {
-      // 處理特定數值類型
+      // 處理特定數值類型（現在它們在 GeneralPropertyFormType 中是 `"" | string`）
       if (
         key === "layoutRooms" ||
         key === "layoutLivingRooms" ||
@@ -353,21 +353,24 @@ function App() {
         key === "buildingAge" ||
         key === "mrtDistance"
       ) {
-        // 確保將空字串轉換為空字串，數字字串轉換為數字
-        // parseFloat 會將空字串轉為 NaN，所以我們需要額外處理
-        const parsedValue = value === "" ? "" : parseFloat(value as string);
-        return {
-          ...prev,
-          // 如果解析結果是 NaN，則保留為空字串，否則使用解析後的數字
-          [key]: isNaN(parsedValue as number) ? "" : parsedValue,
-        };
+        // 關鍵修改點：
+        // 1. 允許空字串
+        // 2. 允許字串中包含數字和小數點 (但不做立即 parseFloat 轉換)
+        // 只有在輸入符合數字或小數點格式時才更新狀態
+        if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+          return {
+            ...prev,
+            [key]: value, // 直接將字串值賦予給狀態
+          };
+        }
+        return prev; // 如果輸入不符合數字或小數點格式（例如輸入字母），則不更新狀態
       }
 
       // 處理評分（它們被定義為 `"" | string`）
       if (name.startsWith("rating_")) {
         return {
           ...prev,
-          [key]: value, // 對於評分，值可以是字串或空字串
+          [key]: value,
         };
       }
 
@@ -375,10 +378,8 @@ function App() {
       return {
         ...prev,
         [key]: value,
-        // 處理區域和來源的連動邏輯
         ...(name === "area" && { district: "", otherDistrict: "" }),
         ...(name === "source" && value !== "其他" && { otherSource: "" }),
-        // 處理車位類型為"無"時清空相關欄位
         ...(name === "carParkType" &&
           value === "無" && {
             carParkFloor: "",
@@ -388,7 +389,6 @@ function App() {
       };
     });
   };
-
   // --- 自動計算邏輯 ---
   useEffect(() => {
     const mainBuilding = parseFloat(
