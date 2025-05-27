@@ -350,7 +350,8 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gray-100">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-md text-center max-w-lg w-full">
           <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">
-            買房便利通 2025 <span className="text-lg sm:text-xl">(v1.5版)</span>
+            買房便利通 2025{" "}
+            <span className="text-base sm:text-xl">(v1.5版)</span>
           </h1>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 w-full">
             <button
