@@ -11,8 +11,17 @@
   },
   "dependencies": {
     "react": "^19.0.0",
+    "xlsx": "^0.18.5",
     "react-dom": "^19.0.0"
   },
+  
+  {
+    "name": "buyhouse-helper",
+    "version": "1.0.0",
+    "dependencies": {
+      "xlsx": "^0.18.5"
+    }
+    
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
