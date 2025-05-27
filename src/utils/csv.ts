@@ -56,11 +56,9 @@ const fieldNameMap: { [key: string]: string } = {
   reason: "獲選的原因",
   id: "記錄ID",
   timestamp: "時間戳記",
-  type: "物件類型", // This refers to record.type (指定社區/一般物件)
 };
 
 // Fields to exclude from the general display, but include in CSV for completeness
-const fieldsToExcludeFromDisplay = ["otherDistrict", "otherSource"];
 
 export const exportToCsv = (records: any[]) => {
   if (records.length === 0) {
@@ -170,9 +168,8 @@ export const importFromCsv = (file: File) => {
             if (originalKey === "id")
               record.id = parseInt(value, 10); // Keep original ID if available
             else if (originalKey === "timestamp") record.timestamp = value;
-            else if (originalKey === "type")
-              record.type =
-                value; // This is the record type (指定社區/一般物件)
+            else if (originalKey === "type") record.type = value;
+            // This is the record type (指定社區/一般物件)
             else {
               // Determine if it's a number, and if so, parse it
               let parsedValue: string | number | null = value;
