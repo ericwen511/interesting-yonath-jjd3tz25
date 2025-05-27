@@ -8,11 +8,18 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
+  
+      
   },
+  
   "dependencies": {
+    "@json2csv/plainjs": "^7.0.6",
     "react": "^19.0.0",
+    "xlsx": "^0.18.5",
     "react-dom": "^19.0.0"
   },
+  
+  
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
