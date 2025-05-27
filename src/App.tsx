@@ -1,4 +1,36 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+interface GeneralPropertyFormType {
+  propertyName: string;
+  area: string;
+  district: string;
+  otherDistrict: string;
+  source: string;
+  otherSource: string;
+  type: string;
+  carParkType: string;
+  carParkFloor: string;
+  layoutRooms: "" | number;
+  layoutLivingRooms: "" | number;
+  layoutBathrooms: "" | number;
+  hasPXMart: string;
+  address: string;
+  floor: string;
+  totalPing: "" | number;
+  mainBuildingPing: "" | number;
+  accessoryBuildingPing: "" | number;
+  carParkPing: "" | number;
+  totalAmount: "" | number;
+  carParkPrice: "" | number;
+  buildingAge: "" | number;
+  mrtStation: string;
+  mrtDistance: "" | number;
+  notes: string;
+  rating_採光: "" | string;
+  rating_生活機能: "" | string;
+  rating_交通: "" | string;
+  rating_價格滿意度: "" | string;
+  rating_未來發展潛力: "" | string;
+}
 import { exportToCsv, importFromCsv } from "./utils/csv"; // 新增匯入
 
 // 定義所有區域和其下的行政區選項
@@ -225,7 +257,8 @@ function App() {
   });
 
   // 初始一般物件表單狀態
-  const initialGeneralPropertyForm = {
+  const initialGeneralPropertyForm: GeneralPropertyFormType = {
+    // <--- 在這裡加上類型註解
     propertyName: "",
     area: "",
     district: "",
@@ -235,32 +268,31 @@ function App() {
     type: "",
     carParkType: "",
     carParkFloor: "",
-    layoutRooms: "" as "" | number, // Explicitly allow number or ""
-    layoutLivingRooms: "" as "" | number,
-    layoutBathrooms: "" as "" | number,
-    hasPXMart: "" as string,
+    layoutRooms: "", // <--- 這裡不需要 `as "" | number`
+    layoutLivingRooms: "", // <--- 這裡不需要 `as "" | number`
+    layoutBathrooms: "", // <--- 這裡不需要 `as "" | number`
+    hasPXMart: "",
     address: "",
     floor: "",
-    totalPing: "" as "" | number,
-    mainBuildingPing: "" as "" | number,
-    accessoryBuildingPing: "" as "" | number,
-    carParkPing: "" as "" | number,
-    totalAmount: "" as "" | number,
-    carParkPrice: "" as "" | number,
-    buildingAge: "" as "" | number,
+    totalPing: "", // <--- 這裡不需要 `as "" | number`
+    mainBuildingPing: "", // <--- 這裡不需要 `as "" | number`
+    accessoryBuildingPing: "", // <--- 這裡不需要 `as "" | number`
+    carParkPing: "", // <--- 這裡不需要 `as "" | number`
+    totalAmount: "", // <--- 這裡不需要 `as "" | number`
+    carParkPrice: "", // <--- 這裡不需要 `as "" | number`
+    buildingAge: "", // <--- 這裡不需要 `as "" | number`
     mrtStation: "",
-    mrtDistance: "" as "" | number,
+    mrtDistance: "", // <--- 這裡不需要 `as "" | number`
     notes: "",
-    rating_採光: "" as "" | string,
-    rating_生活機能: "" as "" | string,
-    rating_交通: "" as "" | string,
-    rating_價格滿意度: "" as "" | string,
-    rating_未來發展潛力: "" as "" | string,
+    rating_採光: "",
+    rating_生活機能: "",
+    rating_交通: "",
+    rating_價格滿意度: "",
+    rating_未來發展潛力: "",
   };
 
-  const [generalPropertyForm, setGeneralPropertyForm] = useState(
-    initialGeneralPropertyForm
-  );
+  const [generalPropertyForm, setGeneralPropertyForm] =
+    useState<GeneralPropertyFormType>(initialGeneralPropertyForm);
 
   // 自動計算結果的狀態
   const [unitPrice, setUnitPrice] = useState<number | null>(null);
@@ -303,25 +335,58 @@ function App() {
     >
   ) => {
     const { name, value } = e.target;
-    if (name.startsWith("rating_")) {
-      setGeneralPropertyForm((prev) => ({
+    // 使用類型斷言告訴 TypeScript `name` 是 `GeneralPropertyFormType` 的一個鍵
+    const key = name as keyof GeneralPropertyFormType;
+
+    setGeneralPropertyForm((prev) => {
+      // 處理特定數值類型
+      if (
+        key === "layoutRooms" ||
+        key === "layoutLivingRooms" ||
+        key === "layoutBathrooms" ||
+        key === "totalPing" ||
+        key === "mainBuildingPing" ||
+        key === "accessoryBuildingPing" ||
+        key === "carParkPing" ||
+        key === "totalAmount" ||
+        key === "carParkPrice" ||
+        key === "buildingAge" ||
+        key === "mrtDistance"
+      ) {
+        // 確保將空字串轉換為空字串，數字字串轉換為數字
+        // parseFloat 會將空字串轉為 NaN，所以我們需要額外處理
+        const parsedValue = value === "" ? "" : parseFloat(value as string);
+        return {
+          ...prev,
+          // 如果解析結果是 NaN，則保留為空字串，否則使用解析後的數字
+          [key]: isNaN(parsedValue as number) ? "" : parsedValue,
+        };
+      }
+
+      // 處理評分（它們被定義為 `"" | string`）
+      if (name.startsWith("rating_")) {
+        return {
+          ...prev,
+          [key]: value, // 對於評分，值可以是字串或空字串
+        };
+      }
+
+      // 處理其他字串類型（這些沒有特定的數值轉換）
+      return {
         ...prev,
-        [name]: value,
-      }));
-    } else {
-      setGeneralPropertyForm((prev) => ({
-        ...prev,
-        [name]: value,
+        [key]: value,
+        // 處理區域和來源的連動邏輯
         ...(name === "area" && { district: "", otherDistrict: "" }),
         ...(name === "source" && value !== "其他" && { otherSource: "" }),
+        // 處理車位類型為"無"時清空相關欄位
         ...(name === "carParkType" &&
           value === "無" && {
             carParkFloor: "",
             carParkPing: "",
             carParkPrice: "",
           }),
-      }));
-    }
+      };
+    });
   };
 
   // --- 自動計算邏輯 ---
