@@ -124,12 +124,16 @@ const App: React.FC = () => {
     >
   ) => {
     const { name, value } = e.target;
+    // 將 name 斷言為 FormData 的鍵類型
+    const fieldName = name as keyof FormData;
+
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value,
+      [fieldName]: value, // 使用斷言後的 fieldName
     }));
-    if (errors[name]) {
-      setErrors((prevErrors) => ({ ...prevErrors, [name]: undefined }));
+    if (errors[fieldName]) {
+      // 使用斷言後的 fieldName
+      setErrors((prevErrors) => ({ ...prevErrors, [fieldName]: undefined }));
     }
   };
 
@@ -346,7 +350,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-gray-100">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-md text-center max-w-lg w-full">
           <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">
-            請問這是指定社區嗎？
+            買房便利通 2025 <span className="text-lg sm:text-xl">(v1.5版)</span>
           </h1>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 w-full">
             <button
