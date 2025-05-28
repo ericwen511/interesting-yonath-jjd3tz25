@@ -212,7 +212,10 @@ export const exportToCsv = (records: RecordType[]) => {
     return row.join(",");
   });
 
-  const csvContent = [headerRow, ...dataRows].join("\n");
+  // ✅ 加入 UTF-8 BOM
+  const BOM = "\uFEFF";
+  const csvContent = BOM + [headerRow, ...dataRows].join("\n");
+
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
