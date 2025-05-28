@@ -57,6 +57,10 @@ interface RecordType {
 }
 // ============== 介面定義 END ==============
 
+// 由於 ratingCategories 在 App.tsx 中定義，需要在這裡導入才能使用
+// 假設 App.tsx 中 ratingCategories 是導出的
+// 如果 App.tsx 中沒有導出，你需要在 App.tsx 的 ratingCategories 前面加上 `export`
+import { ratingCategories } from '../App'; // 這是關鍵的導入
 
 // 映射物件欄位到 CSV 標頭
 const fieldNameMap: { [key: string]: string } = {
@@ -72,7 +76,7 @@ const fieldNameMap: { [key: string]: string } = {
   otherDistrict: "其他行政區",
   source: "物件來源",
   otherSource: "其他來源",
-  type: "房屋種類", // 這是房屋種類 (預售屋, 中古屋等)，而不是物件類別
+  type: "房屋種類", // 這是房屋種類 (預售屋, 中古屋, 新成屋, 指定社區)
   carParkType: "車位形式",
   carParkFloor: "車位樓層",
   layoutRooms: "房間數",
@@ -275,7 +279,8 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
                 "unitPrice", "indoorUsablePing", "publicAreaRatio", "totalRating"
               ];
               // 評分欄位也是數字，但它們是字串形式的 "1", "2"
-              const ratingFields = ratingCategories.map(cat => `rating_${cat}`);
+              // 這裡使用了導入的 ratingCategories 來動態生成字段名
+              const ratingFields = ratingCategories.map((cat: string) => `rating_${cat}`); // 明確 cat 的類型
 
               if (numericFields.includes(fieldKey) && processedValue !== "") {
                 const numValue = parseFloat(processedValue);
@@ -343,8 +348,19 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
       resolve(importedRecords);
     };
 
-    reader.onerror = (error) => {
-      reject(new Error(`讀取檔案失敗: ${error.message || error}`));
+    reader.onerror = (errorEvent) => { // 這裡將參數類型明確為 ProgressEvent
+      const readerError = reader.error; // 訪問 FileReader 的 error 屬性
+      let errorMessage = "未知錯誤";
+      if (readerError) {
+        if (readerError.name === "DOMException") {
+            errorMessage = `DOMException: ${readerError.message}`;
+        } else if (readerError instanceof Error) {
+            errorMessage = `Error: ${readerError.message}`;
+        } else {
+            errorMessage = `讀取檔案失敗: ${String(readerError)}`;
+        }
+      }
+      reject(new Error(errorMessage));
     };
     reader.readAsText(file, "UTF-8");
   });
