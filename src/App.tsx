@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { exportToCsv, importFromCsv } from "./utils/csv";
+
+// ============== 介面定義 START ==============
 interface GeneralPropertyFormType {
   propertyName: string;
   area: string;
@@ -6,7 +9,7 @@ interface GeneralPropertyFormType {
   otherDistrict: string;
   source: string;
   otherSource: string;
-  type: string;
+  type: string; // 這個 'type' 是房屋種類 (預售屋, 中古屋, 新成屋, 指定社區)
   carParkType: string;
   carParkFloor: string;
   layoutRooms: "" | string;
@@ -30,58 +33,103 @@ interface GeneralPropertyFormType {
   rating_交通: "" | string;
   rating_價格滿意度: "" | string;
   rating_未來發展潛力: "" | string;
+  // 新增計算後欄位，它們應該是 number 或 null
+  unitPrice: number | null;
+  indoorUsablePing: number | null;
+  publicAreaRatio: number | null;
+  totalRating: number | null;
 }
-import { exportToCsv, importFromCsv } from "./utils/csv"; // 新增匯入
+
+interface CommunityFormType {
+  area: string;
+  district: string;
+  communityName: string;
+  address: string;
+  reason: string;
+}
+
+// 定義新的物件類別聯合類型
+type ObjectCategory = "general" | "community";
+
+interface RecordType {
+  id: number;
+  timestamp: string;
+  objectCategory: ObjectCategory; // 新增的物件類別屬性
+  // formData 的類型根據 objectCategory 而定
+  formData: GeneralPropertyFormType | CommunityFormType;
+}
+
+// ============== 介面定義 END ==============
 
 // 定義所有區域和其下的行政區選項
 const areas = ["台北市", "新北市"];
 
 const districtsByArea: { [key: string]: string[] } = {
   台北市: [
-    "北投區",
-    "士林區",
+    "中正區",
     "大同區",
     "中山區",
     "松山區",
-    "內湖區",
-    "萬華區",
-    "中正區",
     "大安區",
+    "萬華區",
     "信義區",
+    "士林區",
+    "北投區",
+    "內湖區",
     "南港區",
     "文山區",
   ],
   新北市: [
-    "三重區",
     "板橋區",
+    "三重區",
     "中和區",
     "永和區",
     "新莊區",
     "新店區",
     "土城區",
     "蘆洲區",
-    "汐止區",
     "樹林區",
-    "三峽區",
+    "汐止區",
     "鶯歌區",
+    "三峽區",
+    "淡水區",
+    "瑞芳區",
+    "五股區",
+    "泰山區",
     "林口區",
     "深坑區",
-    "淡水區",
-    "其他區", // Added for otherDistrict
+    "石碇區",
+    "坪林區",
+    "三芝區",
+    "石門區",
+    "八里區",
+    "平溪區",
+    "雙溪區",
+    "貢寮區",
+    "金山區",
+    "萬里區",
+    "烏來區",
+    "其他區", // 新增 "其他區" 選項
   ],
 };
 
-// 下拉選單選項
-const sources = ["永慶房屋", "信義房屋", "住商", "591", "樂居", "其他"];
-const propertyTypes = ["預售屋", "新成屋", "中古屋"];
-const carParkTypes = ["平面坡道", "機械", "塔式", "無"];
-const carParkFloors = ["B1", "B2", "B3", "B4", "B5"];
-const roomOptions = [1, 2, 3, 4];
-const livingRoomOptions = [1, 2, 3];
-const bathroomOptions = [1, 2, 3];
+const sources = ["房屋仲介", "售屋網站", "親友介紹", "廣告傳單", "其他"];
+const propertyTypes = [
+  "預售屋",
+  "中古屋",
+  "新成屋",
+  "店面",
+  "辦公室",
+  "土地",
+  "其他",
+];
+const carParkTypes = ["坡道平面", "坡道機械", "升降平面", "升降機械", "無"];
+const carParkFloors = ["B1", "B2", "B3", "B4", "B5", "1F", "RF"];
+const roomOptions = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+const livingRoomOptions = ["1", "2", "3", "4", "5+"];
+const bathroomOptions = ["1", "2", "3", "4", "5+"];
 const yesNoOptions = ["是", "否"];
-
-// 評分項目
+const ratingOptions = ["1", "2", "3", "4", "5"];
 const ratingCategories = [
   "採光",
   "生活機能",
@@ -89,158 +137,190 @@ const ratingCategories = [
   "價格滿意度",
   "未來發展潛力",
 ];
-const ratingOptions = ["1", "2", "3", "4", "5"]; // 1-5 分的下拉選單選項
 
-// 共用的 Tailwind CSS 類別，方便管理
-const commonSelectClasses =
-  "block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900";
-const commonInputClasses =
-  "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900";
-const commonLabelClasses = "block text-sm font-medium text-gray-700";
-const sectionTitleClasses =
-  "text-xl font-semibold text-gray-800 mb-4 border-b pb-2";
-const calculatedValueClasses =
-  "mt-1 block w-full p-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-md shadow-inner"; // 計算結果顯示樣式
+// 計算顯示的單坪價格
+const calculateUnitPrice = (
+  totalAmount: string,
+  totalPing: string,
+  carParkPrice: string,
+  carParkPing: string
+): number | null => {
+  const totalAmountNum = parseFloat(totalAmount);
+  const totalPingNum = parseFloat(totalPing);
+  const carParkPriceNum = parseFloat(carParkPrice);
+  const carParkPingNum = parseFloat(carParkPing);
 
-// 輔助元件：用於顯示計算結果的 InputGroup
-const CalculatedValueDisplay = ({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string | number;
-  unit: string;
-}) => (
-  <div>
-    <label className={commonLabelClasses}>{label}</label>
-    <div className={calculatedValueClasses}>
-      {value !== "" && value !== null ? `${value}${unit}` : "N/A"}
-    </div>
-  </div>
-);
+  // 檢查所有數值是否有效
+  if (
+    isNaN(totalAmountNum) ||
+    isNaN(totalPingNum) ||
+    totalPingNum <= 0 ||
+    (carParkPrice && isNaN(carParkPriceNum)) || // 如果有車位價格，檢查其有效性
+    (carParkPing && isNaN(carParkPingNum)) // 如果有車位坪數，檢查其有效性
+  ) {
+    return null; // 無效輸入
+  }
 
-const InputGroup = ({
-  label,
-  name,
-  type = "text",
-  value,
-  onChange,
-  placeholder = "",
-  options,
-  isSelect = false,
-  isTextArea = false,
-  rows = 3,
-  min,
-  max,
-  step,
-}: {
+  let calculatedAmount = totalAmountNum;
+  let calculatedPing = totalPingNum;
+
+  // 如果有車位，從總價和總坪數中扣除車位部分
+  if (!isNaN(carParkPriceNum) && !isNaN(carParkPingNum) && carParkPingNum > 0) {
+    calculatedAmount -= carParkPriceNum;
+    calculatedPing -= carParkPingNum;
+  }
+
+  if (calculatedPing <= 0) {
+    return null; // 扣除車位後坪數為0或負數，無法計算單價
+  }
+
+  return parseFloat((calculatedAmount / calculatedPing).toFixed(2));
+};
+
+// 計算室內使用坪
+const calculateIndoorUsablePing = (
+  mainBuildingPing: string,
+  accessoryBuildingPing: string
+): number | null => {
+  const mainBuildingPingNum = parseFloat(mainBuildingPing);
+  const accessoryBuildingPingNum = parseFloat(accessoryBuildingPing);
+
+  if (isNaN(mainBuildingPingNum) || isNaN(accessoryBuildingPingNum)) {
+    return null;
+  }
+  return parseFloat(
+    (mainBuildingPingNum + accessoryBuildingPingNum).toFixed(2)
+  );
+};
+
+// 計算公設比
+const calculatePublicAreaRatio = (
+  totalPing: string,
+  mainBuildingPing: string,
+  accessoryBuildingPing: string
+): number | null => {
+  const totalPingNum = parseFloat(totalPing);
+  const mainBuildingPingNum = parseFloat(mainBuildingPing);
+  const accessoryBuildingPingNum = parseFloat(accessoryBuildingPing);
+
+  if (
+    isNaN(totalPingNum) ||
+    totalPingNum <= 0 ||
+    isNaN(mainBuildingPingNum) ||
+    isNaN(accessoryBuildingPingNum)
+  ) {
+    return null;
+  }
+
+  const indoorUsable = mainBuildingPingNum + accessoryBuildingPingNum;
+  if (indoorUsable >= totalPingNum) {
+    return 0; // 室內坪數大於總坪數，公設比為0或數據有問題
+  }
+
+  return parseFloat(
+    (((totalPingNum - indoorUsable) / totalPingNum) * 100).toFixed(2)
+  );
+};
+
+// 用於 InputGroup 的類型
+interface InputGroupProps {
   label: string;
   name: string;
-  type?: string;
   value: string | number | null;
   onChange: (
     e: React.ChangeEvent<
-      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => void;
-  placeholder?: string;
-  options?: (string | number)[];
   isSelect?: boolean;
+  options?: string[];
   isTextArea?: boolean;
   rows?: number;
-  min?: number;
-  max?: number;
-  step?: number;
-}) => (
-  <div>
-    <label htmlFor={name} className={commonLabelClasses}>
-      {label}
-    </label>
-    {isSelect ? (
-      <select
-        id={name}
-        name={name}
-        value={value === null ? "" : String(value)}
-        onChange={onChange}
-        className={commonSelectClasses}
-      >
-        <option value="">請選擇</option>
-        {options?.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    ) : isTextArea ? (
-      <textarea
-        id={name}
-        name={name}
-        value={value as string}
-        onChange={onChange}
-        rows={rows}
-        className={`${commonInputClasses} resize-y`}
-        placeholder={placeholder}
-      ></textarea>
-    ) : (
-      <input
-        type={type}
-        id={name}
-        name={name}
-        value={value === null ? "" : value.toString()}
-        onChange={onChange}
-        className={commonInputClasses}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-      />
-    )}
-  </div>
-);
+  placeholder?: string;
+  type?: string; // 允許指定 input 的 type，例如 "text", "number"
+}
 
-// 新增一個映射，用於將英文欄位名稱轉換為中文
-const fieldNameMap: { [key: string]: string } = {
-  propertyName: "物件名稱",
-  area: "主要都市",
-  district: "行政區",
-  otherDistrict: "其他行政區", // 這裡需要包含，因為在匯出時可能需要
-  source: "物件來源",
-  otherSource: "其他來源", // 這裡需要包含，因為在匯出時可能需要
-  type: "房屋種類",
-  carParkType: "車位形式",
-  carParkFloor: "車位樓層",
-  layoutRooms: "房間數",
-  layoutLivingRooms: "客餐廳數",
-  layoutBathrooms: "衛浴數",
-  hasPXMart: "附近是否有全聯",
-  address: "地址",
-  floor: "樓層",
-  totalPing: "權狀坪數",
-  mainBuildingPing: "主建物(坪)",
-  accessoryBuildingPing: "附屬建物(坪)",
-  carParkPing: "車位(坪)",
-  totalAmount: "總價(萬)",
-  carParkPrice: "車位價格(萬)",
-  buildingAge: "屋齡",
-  mrtStation: "附近的捷運站",
-  mrtDistance: "距離捷運站幾公尺",
-  notes: "備註",
-  rating_採光: "採光",
-  rating_生活機能: "生活機能",
-  rating_交通: "交通",
-  rating_價格滿意度: "價格滿意度",
-  rating_未來發展潛力: "未來發展潛力",
-  unitPrice: "單坪價格(萬)",
-  indoorUsablePing: "室內可用坪數",
-  publicAreaRatio: "公設比",
-  totalRating: "物件評分",
-  communityName: "社區名稱",
-  reason: "獲選的原因",
+// InputGroup 組件 (假設您已經定義或將定義在 App.tsx 內部)
+const InputGroup: React.FC<InputGroupProps> = ({
+  label,
+  name,
+  value,
+  onChange,
+  isSelect = false,
+  options = [],
+  isTextArea = false,
+  rows = 3,
+  placeholder = "",
+  type = "text",
+}) => {
+  const id = `input-${name}`;
+
+  return (
+    <div className="flex flex-col">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      {isSelect ? (
+        <select
+          id={id}
+          name={name}
+          value={value === null ? "" : value} // 將 null 轉換為空字串，以正確顯示下拉選單
+          onChange={onChange}
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
+        >
+          <option value="">請選擇</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : isTextArea ? (
+        <textarea
+          id={id}
+          name={name}
+          value={value === null ? "" : value} // 將 null 轉換為空字串
+          onChange={onChange}
+          rows={rows}
+          placeholder={placeholder}
+          className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-2"
+        ></textarea>
+      ) : (
+        <input
+          id={id}
+          name={name}
+          type={type}
+          value={value === null ? "" : value} // 將 null 轉換為空字串
+          onChange={onChange}
+          placeholder={placeholder}
+          className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-2"
+        />
+      )}
+    </div>
+  );
 };
 
-// 排除顯示的欄位 (僅用於 UI 顯示，CSV 匯出會包含這些欄位)
-const fieldsToExclude = ["otherDistrict", "otherSource"];
+// CalculatedValueDisplay 組件
+interface CalculatedValueDisplayProps {
+  label: string;
+  value: string | number | null;
+  unit: string;
+}
+
+const CalculatedValueDisplay: React.FC<CalculatedValueDisplayProps> = ({
+  label,
+  value,
+  unit,
+}) => {
+  return (
+    <div className="flex flex-col">
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <div className="mt-1 p-2 border border-gray-300 bg-gray-100 rounded-md text-gray-800 font-semibold text-sm">
+        {value !== null && value !== "" ? `${value} ${unit}` : "N/A"}
+      </div>
+    </div>
+  );
+};
 
 function App() {
   // isDesignatedCommunity 現在不僅控制顯示哪個表單，也幫助區分返回行為
@@ -248,251 +328,148 @@ function App() {
     boolean | null
   >(null);
 
-  const [designatedCommunityForm, setDesignatedCommunityForm] = useState({
-    area: "",
-    district: "",
-    communityName: "",
-    address: "",
-    reason: "",
-  });
+  const [designatedCommunityForm, setDesignatedCommunityForm] =
+    useState<CommunityFormType>({
+      area: "",
+      district: "",
+      communityName: "",
+      address: "",
+      reason: "",
+    });
 
   // 初始一般物件表單狀態
   const initialGeneralPropertyForm: GeneralPropertyFormType = {
-    // <--- 在這裡加上類型註解
     propertyName: "",
     area: "",
     district: "",
     otherDistrict: "",
     source: "",
     otherSource: "",
-    type: "",
+    type: "", // 這個是房屋種類，預設空字串
     carParkType: "",
     carParkFloor: "",
-    layoutRooms: "", // <--- 這裡不需要 `as "" | number`
-    layoutLivingRooms: "", // <--- 這裡不需要 `as "" | number`
-    layoutBathrooms: "", // <--- 這裡不需要 `as "" | number`
+    layoutRooms: "",
+    layoutLivingRooms: "",
+    layoutBathrooms: "",
     hasPXMart: "",
     address: "",
     floor: "",
-    totalPing: "", // <--- 這裡不需要 `as "" | number`
-    mainBuildingPing: "", // <--- 這裡不需要 `as "" | number`
-    accessoryBuildingPing: "", // <--- 這裡不需要 `as "" | number`
-    carParkPing: "", // <--- 這裡不需要 `as "" | number`
-    totalAmount: "", // <--- 這裡不需要 `as "" | number`
-    carParkPrice: "", // <--- 這裡不需要 `as "" | number`
-    buildingAge: "", // <--- 這裡不需要 `as "" | number`
+    totalPing: "",
+    mainBuildingPing: "",
+    accessoryBuildingPing: "",
+    carParkPing: "",
+    totalAmount: "",
+    carParkPrice: "",
+    buildingAge: "",
     mrtStation: "",
-    mrtDistance: "", // <--- 這裡不需要 `as "" | number`
+    mrtDistance: "",
     notes: "",
     rating_採光: "",
     rating_生活機能: "",
     rating_交通: "",
     rating_價格滿意度: "",
     rating_未來發展潛力: "",
+    unitPrice: null, // 初始化為 null
+    indoorUsablePing: null, // 初始化為 null
+    publicAreaRatio: null, // 初始化為 null
+    totalRating: null, // 初始化為 null
   };
 
   const [generalPropertyForm, setGeneralPropertyForm] =
     useState<GeneralPropertyFormType>(initialGeneralPropertyForm);
 
-  // 自動計算結果的狀態
+  // 自動計算結果的狀態 (這些變為依賴 `generalPropertyForm` 而計算出的值)
   const [unitPrice, setUnitPrice] = useState<number | null>(null);
   const [indoorUsablePing, setIndoorUsablePing] = useState<number | null>(null);
   const [publicAreaRatio, setPublicAreaRatio] = useState<number | null>(null);
   const [totalRating, setTotalRating] = useState<number>(0);
 
-  // 儲存的資料記錄
-  const [savedRecords, setSavedRecords] = useState<any[]>(() => {
+  // 儲存的資料記錄，現在使用 RecordType 介面
+  const [savedRecords, setSavedRecords] = useState<RecordType[]>(() => {
     const saved = localStorage.getItem("propertyRecords");
-    return saved ? JSON.parse(saved) : [];
+    // 解析時可能需要處理舊格式的資料，如果 localStorage 中有舊數據，需要轉換
+    try {
+      const parsed = saved ? JSON.parse(saved) : [];
+      // 如果舊資料沒有 objectCategory，給予一個預設值（例如根據formData來判斷）
+      return parsed.map((record: any) => {
+        if (!record.objectCategory) {
+          // 簡易判斷，如果formData中有communityName，則視為community
+          const inferredCategory: ObjectCategory =
+            record.formData && record.formData.communityName
+              ? "community"
+              : "general";
+          return { ...record, objectCategory: inferredCategory };
+        }
+        return record;
+      });
+    } catch (e) {
+      console.error("Error parsing saved records from localStorage:", e);
+      return []; // 返回空陣列以避免應用程式崩潰
+    }
   });
-  const [showRecords, setShowRecords] = useState<boolean>(false);
-  const [editingRecordId, setEditingRecordId] = useState<number | null>(null); // 用於追蹤正在編輯的記錄 ID
 
-  // 檔案輸入框的引用，用於觸發點擊
+  // 編輯模式的 ID
+  const [editingRecordId, setEditingRecordId] = useState<number | null>(null);
+  // 控制顯示記錄列表
+  const [showRecords, setShowRecords] = useState(true);
+
+  // 用於匯入檔案的 ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 將資料存入 localStorage 的副作用
+  // 效果：當表單數據改變時，自動計算單價、室內坪數和公設比
+  useEffect(() => {
+    // 只有在一般物件表單時才進行這些計算
+    if (isDesignatedCommunity === false) {
+      setUnitPrice(
+        calculateUnitPrice(
+          generalPropertyForm.totalAmount,
+          generalPropertyForm.totalPing,
+          generalPropertyForm.carParkPrice,
+          generalPropertyForm.carParkPing
+        )
+      );
+      setIndoorUsablePing(
+        calculateIndoorUsablePing(
+          generalPropertyForm.mainBuildingPing,
+          generalPropertyForm.accessoryBuildingPing
+        )
+      );
+      setPublicAreaRatio(
+        calculatePublicAreaRatio(
+          generalPropertyForm.totalPing,
+          generalPropertyForm.mainBuildingPing,
+          generalPropertyForm.accessoryBuildingPing
+        )
+      );
+
+      // 計算總評分
+      const ratings = ratingCategories.map(
+        (category) =>
+          parseFloat(
+            generalPropertyForm[
+              `rating_${category}` as keyof typeof generalPropertyForm
+            ] as string
+          ) || 0
+      );
+      const sumRatings = ratings.reduce((sum, current) => sum + current, 0);
+      setTotalRating(parseFloat(sumRatings.toFixed(2)));
+    } else {
+      // 如果不是一般物件，則清空這些計算值
+      setUnitPrice(null);
+      setIndoorUsablePing(null);
+      setPublicAreaRatio(null);
+      setTotalRating(0);
+    }
+  }, [generalPropertyForm, isDesignatedCommunity]);
+
+  // 效果：當 savedRecords 改變時，儲存到 localStorage
   useEffect(() => {
     localStorage.setItem("propertyRecords", JSON.stringify(savedRecords));
   }, [savedRecords]);
 
-  const handleDesignatedChange = (
-    e: React.ChangeEvent<
-      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setDesignatedCommunityForm((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "area" && { district: "" }),
-    }));
-  };
-
-  const handleGeneralChange = (
-    e: React.ChangeEvent<
-      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    // 使用類型斷言告訴 TypeScript `name` 是 `GeneralPropertyFormType` 的一個鍵
-    const key = name as keyof GeneralPropertyFormType;
-
-    setGeneralPropertyForm((prev) => {
-      // 處理特定數值類型（現在它們在 GeneralPropertyFormType 中是 `"" | string`）
-      if (
-        key === "layoutRooms" ||
-        key === "layoutLivingRooms" ||
-        key === "layoutBathrooms" ||
-        key === "totalPing" ||
-        key === "mainBuildingPing" ||
-        key === "accessoryBuildingPing" ||
-        key === "carParkPing" ||
-        key === "totalAmount" ||
-        key === "carParkPrice" ||
-        key === "buildingAge" ||
-        key === "mrtDistance"
-      ) {
-        // 關鍵修改點：
-        // 1. 允許空字串
-        // 2. 允許字串中包含數字和小數點 (但不做立即 parseFloat 轉換)
-        // 只有在輸入符合數字或小數點格式時才更新狀態
-        if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
-          return {
-            ...prev,
-            [key]: value, // 直接將字串值賦予給狀態
-          };
-        }
-        return prev; // 如果輸入不符合數字或小數點格式（例如輸入字母），則不更新狀態
-      }
-
-      // 處理評分（它們被定義為 `"" | string`）
-      if (name.startsWith("rating_")) {
-        return {
-          ...prev,
-          [key]: value,
-        };
-      }
-
-      // 處理其他字串類型（這些沒有特定的數值轉換）
-      return {
-        ...prev,
-        [key]: value,
-        ...(name === "area" && { district: "", otherDistrict: "" }),
-        ...(name === "source" && value !== "其他" && { otherSource: "" }),
-        ...(name === "carParkType" &&
-          value === "無" && {
-            carParkFloor: "",
-            carParkPing: "",
-            carParkPrice: "",
-          }),
-      };
-    });
-  };
-  // --- 自動計算邏輯 ---
-  useEffect(() => {
-    const mainBuilding = parseFloat(
-      generalPropertyForm.mainBuildingPing as string
-    );
-    const accessoryBuilding = parseFloat(
-      generalPropertyForm.accessoryBuildingPing as string
-    );
-    setIndoorUsablePing(
-      !isNaN(mainBuilding) && !isNaN(accessoryBuilding)
-        ? parseFloat((mainBuilding + accessoryBuilding).toFixed(2))
-        : null
-    );
-  }, [
-    generalPropertyForm.mainBuildingPing,
-    generalPropertyForm.accessoryBuildingPing,
-  ]);
-
-  useEffect(() => {
-    const totalAmount = parseFloat(generalPropertyForm.totalAmount as string);
-    const totalPing = parseFloat(generalPropertyForm.totalPing as string);
-    const carParkPrice = parseFloat(generalPropertyForm.carParkPrice as string);
-    const carParkPing = parseFloat(generalPropertyForm.carParkPing as string);
-
-    if (!isNaN(totalAmount) && !isNaN(totalPing) && totalPing > 0) {
-      const actualTotalAmount = isNaN(carParkPrice)
-        ? totalAmount
-        : totalAmount - carParkPrice;
-      const actualTotalPing = isNaN(carParkPing)
-        ? totalPing
-        : totalPing - carParkPing;
-      setUnitPrice(
-        actualTotalPing > 0
-          ? parseFloat((actualTotalAmount / actualTotalPing).toFixed(2))
-          : null
-      );
-    } else {
-      setUnitPrice(null);
-    }
-  }, [
-    generalPropertyForm.totalAmount,
-    generalPropertyForm.totalPing,
-    generalPropertyForm.carParkPrice,
-    generalPropertyForm.carParkPing,
-  ]);
-
-  useEffect(() => {
-    const mainBuilding = parseFloat(
-      generalPropertyForm.mainBuildingPing as string
-    );
-    const accessoryBuilding = parseFloat(
-      generalPropertyForm.accessoryBuildingPing as string
-    );
-    const totalPing = parseFloat(generalPropertyForm.totalPing as string);
-    const carParkPing = parseFloat(generalPropertyForm.carParkPing as string);
-
-    if (
-      !isNaN(mainBuilding) &&
-      !isNaN(accessoryBuilding) &&
-      !isNaN(totalPing) &&
-      totalPing > 0
-    ) {
-      const indoorArea = mainBuilding + accessoryBuilding;
-      const actualTotalPing = isNaN(carParkPing)
-        ? totalPing
-        : totalPing - carParkPing;
-      const publicRatio =
-        actualTotalPing > 0 ? (1 - indoorArea / actualTotalPing) * 100 : null;
-      setPublicAreaRatio(
-        publicRatio !== null ? parseFloat(publicRatio.toFixed(2)) : null
-      );
-    } else {
-      setPublicAreaRatio(null);
-    }
-  }, [
-    generalPropertyForm.mainBuildingPing,
-    generalPropertyForm.accessoryBuildingPing,
-    generalPropertyForm.totalPing,
-    generalPropertyForm.carParkPing,
-  ]);
-
-  useEffect(() => {
-    let sum = 0;
-    ratingCategories.forEach((category) => {
-      const ratingValue =
-        generalPropertyForm[
-          `rating_${category}` as keyof typeof generalPropertyForm
-        ];
-      if (typeof ratingValue === "string" && ratingValue !== "") {
-        sum += parseInt(ratingValue, 10);
-      }
-    });
-    setTotalRating(sum);
-  }, [
-    generalPropertyForm.rating_採光,
-    generalPropertyForm.rating_生活機能,
-    generalPropertyForm.rating_交通,
-    generalPropertyForm.rating_價格滿意度,
-    generalPropertyForm.rating_未來發展潛力,
-  ]);
-
   // 重置表單
   const resetForm = useCallback(
-    (resetToInitialChoice = false) => {
+    (resetToInitialChoice: boolean) => {
       setDesignatedCommunityForm({
         area: "",
         district: "",
@@ -500,30 +477,53 @@ function App() {
         address: "",
         reason: "",
       });
-      setGeneralPropertyForm(initialGeneralPropertyForm);
-      setUnitPrice(null);
-      setIndoorUsablePing(null);
-      setPublicAreaRatio(null);
-      setTotalRating(0);
-      setEditingRecordId(null); // 重置編輯狀態
+      setGeneralPropertyForm(initialGeneralPropertyForm); // 使用初始值
+      setEditingRecordId(null);
+      setShowRecords(true); // 重置或清空後顯示記錄
+      // 如果需要回到初始選擇頁面，設置 isDesignatedCommunity 為 null
       if (resetToInitialChoice) {
-        // 如果需要回到最初的選擇頁面
         setIsDesignatedCommunity(null);
       }
     },
     [initialGeneralPropertyForm]
   );
 
+  // 處理一般物件表單的輸入改變
+  const handleGeneralChange = useCallback(
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >
+    ) => {
+      const { name, value } = e.target;
+      setGeneralPropertyForm((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
+
+  // 處理指定社區表單的輸入改變
+  const handleDesignatedChange = useCallback(
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >
+    ) => {
+      const { name, value } = e.target;
+      setDesignatedCommunityForm((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
+
   // 提交或更新表單資料
   const handleSubmit = () => {
-    let newRecordData;
-    let recordType;
+    let newRecordData: GeneralPropertyFormType | CommunityFormType; // 定義聯合類型
+    let objectCategory: ObjectCategory; // 使用新的物件類別屬性
 
     if (isDesignatedCommunity) {
-      recordType = "指定社區";
+      objectCategory = "community"; // 指定為指定社區類別
       newRecordData = designatedCommunityForm;
     } else {
-      recordType = "一般物件";
+      objectCategory = "general"; // 指定為一般物件類別
       newRecordData = {
         ...generalPropertyForm,
         unitPrice,
@@ -539,6 +539,7 @@ function App() {
         record.id === editingRecordId
           ? {
               ...record,
+              objectCategory: objectCategory, // 更新新的物件類別
               formData: newRecordData,
               timestamp: new Date().toLocaleString(),
             }
@@ -548,10 +549,11 @@ function App() {
       alert("資料已成功更新！");
     } else {
       // 新增記錄
-      const newRecord = {
+      const newRecord: RecordType = {
+        // 明確指定類型為 RecordType
         id: Date.now(),
         timestamp: new Date().toLocaleString(),
-        type: recordType,
+        objectCategory: objectCategory, // 使用新的物件類別屬性
         formData: newRecordData,
       };
       setSavedRecords((prev) => [...prev, newRecord]);
@@ -562,27 +564,49 @@ function App() {
   };
 
   // 載入記錄以供編輯
-  const handleEdit = (recordId: number, recordType: string) => {
+  const handleEdit = (
+    recordId: number,
+    recordObjectCategory: ObjectCategory
+  ) => {
+    // 這裡的參數改為 recordObjectCategory
     const recordToEdit = savedRecords.find((record) => record.id === recordId);
     if (recordToEdit) {
-      setIsDesignatedCommunity(recordType === "指定社區"); // 設定表單模式
+      // 使用 record.objectCategory 來設定表單模式
+      setIsDesignatedCommunity(recordObjectCategory === "community");
       setEditingRecordId(recordId); // 設定編輯中的記錄 ID
 
-      if (recordType === "指定社區") {
-        setDesignatedCommunityForm(recordToEdit.formData);
+      if (recordObjectCategory === "community") {
+        // 這裡也使用 recordObjectCategory
+        setDesignatedCommunityForm(recordToEdit.formData as CommunityFormType); // 斷言類型
       } else {
         const loadedForm = { ...initialGeneralPropertyForm };
         for (const key in recordToEdit.formData) {
+          // 確保只複製 GeneralPropertyFormType 中存在的屬性
           if (
             Object.prototype.hasOwnProperty.call(
               initialGeneralPropertyForm,
               key
             )
           ) {
-            // 更嚴謹地檢查屬性是否存在於初始狀態
-            (loadedForm as any)[key] = recordToEdit.formData[key];
+            (loadedForm as any)[key] = (recordToEdit.formData as any)[key];
           }
         }
+        // 載入計算後的數值（如果存在的話）
+        setUnitPrice(
+          (recordToEdit.formData as GeneralPropertyFormType).unitPrice || null
+        );
+        setIndoorUsablePing(
+          (recordToEdit.formData as GeneralPropertyFormType).indoorUsablePing ||
+            null
+        );
+        setPublicAreaRatio(
+          (recordToEdit.formData as GeneralPropertyFormType).publicAreaRatio ||
+            null
+        );
+        setTotalRating(
+          (recordToEdit.formData as GeneralPropertyFormType).totalRating || 0
+        );
+
         setGeneralPropertyForm(loadedForm);
       }
       setShowRecords(false); // 編輯時隱藏記錄列表
@@ -591,81 +615,121 @@ function App() {
   };
 
   // 刪除記錄
-  const handleDelete = (recordId: number) => {
-    if (window.confirm("確定要刪除這筆記錄嗎？")) {
-      const updatedRecords = savedRecords.filter(
-        (record) => record.id !== recordId
-      );
-      setSavedRecords(updatedRecords);
+  const handleDelete = (id: number) => {
+    if (window.confirm("您確定要刪除這筆記錄嗎？")) {
+      setSavedRecords((prev) => prev.filter((record) => record.id !== id));
       alert("記錄已刪除！");
-      if (editingRecordId === recordId) {
-        resetForm(false); // 如果正在編輯的記錄被刪除了，重置編輯狀態但不返回選擇頁
+    }
+  };
+
+  // 匯出 CSV
+  const handleExportCsv = () => {
+    exportToCsv(savedRecords);
+  };
+
+  // 匯入 CSV
+  const handleImportCsv = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try {
+        const imported = await importFromCsv(file);
+        setSavedRecords((prev) => [...prev, ...imported]); // 將匯入的記錄添加到現有記錄中
+        alert(`成功匯入 ${imported.length} 筆記錄！`);
+      } catch (error: any) {
+        alert(`匯入失敗: ${error.message}`);
+        console.error("CSV Import Error:", error);
+      } finally {
+        // 清空 file input，以便可以再次選擇同一個檔案
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
     }
   };
 
-  // 處理 CSV 匯出
-  const handleExportCsv = useCallback(() => {
-    exportToCsv(savedRecords);
-  }, [savedRecords]);
+  // 用於顯示 "顯示所有欄位與值" 細節的映射表
+  const fieldNameMap: { [key: string]: string } = {
+    propertyName: "物件名稱",
+    area: "主要都市",
+    district: "行政區",
+    otherDistrict: "其他行政區",
+    source: "物件來源",
+    otherSource: "其他來源",
+    type: "房屋種類", // 這是房屋種類 (預售屋, 中古屋, 新成屋, 指定社區)
+    carParkType: "車位形式",
+    carParkFloor: "車位樓層",
+    layoutRooms: "房間數",
+    layoutLivingRooms: "客餐廳數",
+    layoutBathrooms: "衛浴數",
+    hasPXMart: "附近是否有全聯",
+    address: "地址",
+    floor: "樓層",
+    totalPing: "權狀坪數",
+    mainBuildingPing: "主建物(坪)",
+    accessoryBuildingPing: "附屬建物(坪)",
+    carParkPing: "車位(坪)",
+    totalAmount: "總價(萬)",
+    carParkPrice: "車位價格(萬)",
+    buildingAge: "屋齡",
+    mrtStation: "附近的捷運站",
+    mrtDistance: "距離捷運站幾公尺",
+    notes: "備註",
+    rating_採光: "採光",
+    rating_生活機能: "生活機能",
+    rating_交通: "交通",
+    rating_價格滿意度: "價格滿意度",
+    rating_未來發展潛力: "未來發展潛力",
+    unitPrice: "單坪價格(萬)",
+    indoorUsablePing: "室內可用坪數",
+    publicAreaRatio: "公設比",
+    totalRating: "物件評分",
+    communityName: "社區名稱",
+    reason: "獲選的原因",
+  };
 
-  // 處理 CSV 匯入
-  const handleImportCsv = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        try {
-          const importedRecords = await importFromCsv(file);
-          // 合併現有記錄和新匯入的記錄，確保 ID 唯一
-          const existingIds = new Set(savedRecords.map((rec) => rec.id));
-          const newUniqueRecords = importedRecords.filter(
-            (rec) => !existingIds.has(rec.id)
-          );
+  // 不希望在 "顯示所有欄位與值" 中重複顯示的欄位
+  const fieldsToExclude = [
+    "id",
+    "timestamp",
+    "objectCategory", // 這個不應該在這裡顯示，因為已經在上方顯示物件類型了
+    "propertyName", // 已在概覽顯示
+    "address", // 已在概覽顯示
+    "totalPing", // 已在概覽顯示
+    "totalAmount", // 已在概覽顯示
+    "unitPrice", // 已在概覽顯示
+    "indoorUsablePing", // 已在概覽顯示
+    "publicAreaRatio", // 已在概覽顯示
+    "totalRating", // 已在概覽顯示
+    "notes", // 已在概覽顯示
+    "communityName", // 已在概覽顯示
+    "reason", // 已在概覽顯示
+  ];
 
-          if (newUniqueRecords.length > 0) {
-            setSavedRecords((prev) => [...prev, ...newUniqueRecords]);
-            alert(`成功匯入 ${newUniqueRecords.length} 筆新記錄！`);
-          } else {
-            alert("沒有新的記錄被匯入（可能已存在重複的記錄）。");
-          }
-        } catch (error) {
-          alert(`匯入失敗: ${(error as Error).message}`);
-          console.error("匯入 CSV 時發生錯誤:", error);
-        }
-      }
-      // Reset file input to allow re-importing the same file
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    },
-    [savedRecords]
-  );
+  const sectionTitleClasses =
+    "text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200";
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
-      <div className="bg-white p-4 sm:p-8 rounded-lg shadow-xl w-full sm:max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">
-          買房便利通 (v2.0版)
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-xl">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+          物件資訊記錄器
         </h1>
-        {/* 新增的署名行 */}
-        <p className="text-sm text-gray-500 text-center mb-6">
-          Made by Eric Wen
-        </p>
+
         {/* 初始判斷區塊 */}
         {isDesignatedCommunity === null && (
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <p className="text-lg text-gray-700">
-              要輸入的物件是指定社區的嗎？
-            </p>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full justify-center">
+          <div className="flex flex-col items-center space-y-6">
+            <h2 className={sectionTitleClasses}>請選擇物件類型</h2>
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
               <button
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="px-8 py-4 bg-blue-600 text-white font-bold text-lg rounded-md shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out"
                 onClick={() => setIsDesignatedCommunity(true)}
               >
                 是 (指定社區)
               </button>
               <button
-                className="px-6 py-3 bg-green-600 text-white font-semibold rounded-md shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                className="px-8 py-4 bg-green-600 text-white font-bold text-lg rounded-md shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out"
                 onClick={() => setIsDesignatedCommunity(false)}
               >
                 否 (一般物件)
@@ -1119,48 +1183,86 @@ function App() {
                       記錄 ID: {record.id} - 時間: {record.timestamp}
                     </p>
                     <p className="text-sm text-gray-800">
-                      物件類型: {record.type}
+                      {/* 這裡現在使用 record.objectCategory 來判斷顯示類型 */}
+                      物件類型:{" "}
+                      {record.objectCategory === "general"
+                        ? "一般物件"
+                        : "指定社區"}
                       <br />
                       {/* 針對主要欄位進行客製化顯示 */}
-                      {record.type === "一般物件" ? (
+                      {record.objectCategory === "general" ? (
                         <>
-                          物件名稱: {record.formData.propertyName || "N/A"}
+                          物件名稱:{" "}
+                          {(record.formData as GeneralPropertyFormType)
+                            .propertyName || "N/A"}
                           <br />
-                          地址: {record.formData.address || "N/A"}
+                          地址:{" "}
+                          {(record.formData as GeneralPropertyFormType)
+                            .address || "N/A"}
                           <br />
-                          總坪數: {record.formData.totalPing || "N/A"} 坪
+                          總坪數:{" "}
+                          {(record.formData as GeneralPropertyFormType)
+                            .totalPing || "N/A"}{" "}
+                          坪
                           <br />
-                          總金額: {record.formData.totalAmount || "N/A"} 萬元
+                          總金額:{" "}
+                          {(record.formData as GeneralPropertyFormType)
+                            .totalAmount || "N/A"}{" "}
+                          萬元
                           <br />
                           單價:{" "}
-                          {record.formData.unitPrice !== null
-                            ? `${record.formData.unitPrice} 萬/坪`
+                          {(record.formData as GeneralPropertyFormType)
+                            .unitPrice !== null
+                            ? `${
+                                (record.formData as GeneralPropertyFormType)
+                                  .unitPrice
+                              } 萬/坪`
                             : "N/A"}
                           <br />
                           室內使用坪:{" "}
-                          {record.formData.indoorUsablePing !== null
-                            ? `${record.formData.indoorUsablePing} 坪`
+                          {(record.formData as GeneralPropertyFormType)
+                            .indoorUsablePing !== null
+                            ? `${
+                                (record.formData as GeneralPropertyFormType)
+                                  .indoorUsablePing
+                              } 坪`
                             : "N/A"}
                           <br />
                           公設比:{" "}
-                          {record.formData.publicAreaRatio !== null
-                            ? `${record.formData.publicAreaRatio} %`
+                          {(record.formData as GeneralPropertyFormType)
+                            .publicAreaRatio !== null
+                            ? `${
+                                (record.formData as GeneralPropertyFormType)
+                                  .publicAreaRatio
+                              } %`
                             : "N/A"}
                           <br />
                           總評分:{" "}
-                          {record.formData.totalRating !== null
-                            ? `${record.formData.totalRating} 分`
+                          {(record.formData as GeneralPropertyFormType)
+                            .totalRating !== null
+                            ? `${
+                                (record.formData as GeneralPropertyFormType)
+                                  .totalRating
+                              } 分`
                             : "N/A"}
                           <br />
-                          備註: {record.formData.notes || "無"}
+                          備註:{" "}
+                          {(record.formData as GeneralPropertyFormType).notes ||
+                            "無"}
                         </>
                       ) : (
                         <>
-                          社區名稱: {record.formData.communityName || "N/A"}
+                          社區名稱:{" "}
+                          {(record.formData as CommunityFormType)
+                            .communityName || "N/A"}
                           <br />
-                          地址: {record.formData.address || "N/A"}
+                          地址:{" "}
+                          {(record.formData as CommunityFormType).address ||
+                            "N/A"}
                           <br />
-                          原因: {record.formData.reason || "無"}
+                          原因:{" "}
+                          {(record.formData as CommunityFormType).reason ||
+                            "無"}
                         </>
                       )}
                     </p>
@@ -1172,6 +1274,7 @@ function App() {
                             顯示所有欄位與值
                           </summary>
                           <div className="text-xs bg-gray-100 p-2 rounded-md mt-1 overflow-x-auto text-black">
+                            {/* 過濾並顯示所有欄位 */}
                             {Object.entries(record.formData).map(
                               ([key, value]) => {
                                 // 排除特定欄位
@@ -1200,7 +1303,9 @@ function App() {
                     {/* 編輯和刪除按鈕 */}
                     <div className="absolute top-4 right-4 flex space-x-2">
                       <button
-                        onClick={() => handleEdit(record.id, record.type)}
+                        onClick={() =>
+                          handleEdit(record.id, record.objectCategory)
+                        } // 傳入新的物件類別
                         className="px-3 py-1 bg-yellow-500 text-white text-xs rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1"
                       >
                         編輯
