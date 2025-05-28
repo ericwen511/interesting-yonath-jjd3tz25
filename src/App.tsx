@@ -113,7 +113,7 @@ const districtsByArea: { [key: string]: string[] } = {
   ],
 };
 
-const sources = ["房屋仲介", "售屋網站", "親友介紹", "廣告傳單", "其他"];
+const sources = ["永慶房屋", "信義房屋", "住商", "591", "樂居"];
 const propertyTypes = [
   "預售屋",
   "中古屋",
@@ -1273,7 +1273,7 @@ function App() {
                       {record.formData && (
                         <details>
                           <summary className="cursor-pointer text-blue-600 hover:underline">
-                            顯示所有欄位與值
+                            顯示所有資料
                           </summary>
                           <div className="text-xs bg-gray-100 p-2 rounded-md mt-1 overflow-x-auto text-black">
                             {/* 過濾並顯示所有欄位 */}
