@@ -229,8 +229,12 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split("\n").filter((line) => line.trim() !== "");
+      let text = event.target?.result as string;
+      // ✅ 清除 UTF-8 BOM，避免第一列無法正確解析為 header
+      const cleanedText = text.replace(/^\uFEFF/, "");
+      const lines = cleanedText
+        .split("\n")
+        .filter((line) => line.trim() !== "");
 
       if (lines.length < 1) {
         reject(new Error("CSV 檔案內容為空。"));
