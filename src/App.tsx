@@ -716,7 +716,7 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-xl">
         <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-          物件資訊記錄器
+          房屋物件資訊記錄器
         </h1>
 
         {/* 初始判斷區塊 */}
