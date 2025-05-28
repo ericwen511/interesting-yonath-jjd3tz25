@@ -130,7 +130,9 @@ const livingRoomOptions = ["1", "2", "3", "4", "5+"];
 const bathroomOptions = ["1", "2", "3", "4", "5+"];
 const yesNoOptions = ["是", "否"];
 const ratingOptions = ["1", "2", "3", "4", "5"];
-const ratingCategories = [
+
+// 這裡加上 export，以便 csv.ts 可以導入
+export const ratingCategories = [
   "採光",
   "生活機能",
   "交通",

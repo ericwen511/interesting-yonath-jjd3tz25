@@ -57,6 +57,7 @@ interface RecordType {
 }
 // ============== 介面定義 END ==============
 
+
 // 映射物件欄位到 CSV 標頭
 const fieldNameMap: { [key: string]: string } = {
   // 核心記錄屬性 (CSV 中新增)
@@ -163,9 +164,7 @@ export const exportToCsv = (records: RecordType[]) => {
     }
   }
 
-  const headerRow = csvHeaders
-    .map((header) => `"${header.replace(/"/g, '""')}"`)
-    .join(","); // 確保標頭也被正確引用
+  const headerRow = csvHeaders.map(header => `"${header.replace(/"/g, '""')}"`).join(","); // 確保標頭也被正確引用
   const dataRows = records.map((record) => {
     const row: (string | number | null)[] = [];
     csvHeaders.forEach((header) => {
@@ -189,20 +188,16 @@ export const exportToCsv = (records: RecordType[]) => {
       } else {
         // 從 formData 中獲取值，根據 objectCategory 判斷類型
         if (record.objectCategory === "general") {
-          const generalFormData = record.formData as GeneralPropertyFormType;
-          value = generalFormData[fieldKey as keyof GeneralPropertyFormType];
+            const generalFormData = record.formData as GeneralPropertyFormType;
+            value = generalFormData[fieldKey as keyof GeneralPropertyFormType];
         } else if (record.objectCategory === "community") {
-          const communityFormData = record.formData as CommunityFormType;
-          value = communityFormData[fieldKey as keyof CommunityFormType];
+            const communityFormData = record.formData as CommunityFormType;
+            value = communityFormData[fieldKey as keyof CommunityFormType];
         }
       }
 
       // 確保將 undefined 或 null 轉換為空字串，並處理逗號
-      row.push(
-        value === undefined || value === null || value === ""
-          ? ""
-          : `"${String(value).replace(/"/g, '""')}"`
-      );
+      row.push(value === undefined || value === null || value === "" ? "" : `"${String(value).replace(/"/g, '""')}"`);
     });
     return row.join(",");
   });
@@ -229,9 +224,7 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
         return;
       }
 
-      const headers = lines[0]
-        .split(",")
-        .map((h) => h.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+      const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
       const importedRecords: RecordType[] = [];
 
       // 反向映射 CSV 標頭到英文鍵名
@@ -272,30 +265,17 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
               } else if (processedValue === "指定社區") {
                 objectCategory = "community";
               } else {
-                console.warn(
-                  `Unknown objectCategory: ${processedValue}. Attempting to infer.`
-                );
+                console.warn(`Unknown objectCategory: ${processedValue}. Attempting to infer.`);
               }
             } else {
               // 對於數字欄位嘗試轉換為數字，否則保留字串或空字串
               const numericFields = [
-                "totalPing",
-                "mainBuildingPing",
-                "accessoryBuildingPing",
-                "carParkPing",
-                "totalAmount",
-                "carParkPrice",
-                "buildingAge",
-                "mrtDistance",
-                "unitPrice",
-                "indoorUsablePing",
-                "publicAreaRatio",
-                "totalRating",
+                "totalPing", "mainBuildingPing", "accessoryBuildingPing", "carParkPing",
+                "totalAmount", "carParkPrice", "buildingAge", "mrtDistance",
+                "unitPrice", "indoorUsablePing", "publicAreaRatio", "totalRating"
               ];
               // 評分欄位也是數字，但它們是字串形式的 "1", "2"
-              const ratingFields = ratingCategories.map(
-                (cat) => `rating_${cat}`
-              );
+              const ratingFields = ratingCategories.map(cat => `rating_${cat}`);
 
               if (numericFields.includes(fieldKey) && processedValue !== "") {
                 const numValue = parseFloat(processedValue);
@@ -305,9 +285,10 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
                   (formData as any)[fieldKey] = processedValue; // 保持為原始字串
                 }
               } else if (ratingFields.includes(fieldKey)) {
-                // 評分欄位直接賦值，因為其值為字串 "1"~"5"
-                (formData as any)[fieldKey] = processedValue;
-              } else {
+                  // 評分欄位直接賦值，因為其值為字串 "1"~"5"
+                  (formData as any)[fieldKey] = processedValue;
+              }
+              else {
                 (formData as any)[fieldKey] = processedValue;
               }
             }
@@ -316,72 +297,39 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
 
         // 確保 objectCategory 有被設定，如果沒有則嘗試推斷
         if (!objectCategory) {
-          // 如果 CSV 沒有 objectCategory 欄位或值無效，嘗試根據其他欄位推斷
-          if (formData.communityName || formData.reason) {
-            // 如果有指定社區特有欄位
-            objectCategory = "community";
-          } else {
-            objectCategory = "general"; // 預設為一般物件
-          }
+            // 如果 CSV 沒有 objectCategory 欄位或值無效，嘗試根據其他欄位推斷
+            if (formData.communityName || formData.reason) { // 如果有指定社區特有欄位
+                objectCategory = "community";
+            } else {
+                objectCategory = "general"; // 預設為一般物件
+            }
         }
 
         // 根據 objectCategory 來創建正確的 formData 結構
         let finalFormData: GeneralPropertyFormType | CommunityFormType;
         if (objectCategory === "general") {
-          // 為 GeneralPropertyFormType 補齊所有預期屬性，確保類型完整
-          finalFormData = {
-            propertyName: "",
-            area: "",
-            district: "",
-            otherDistrict: "",
-            source: "",
-            otherSource: "",
-            type: "",
-            carParkType: "",
-            carParkFloor: "",
-            layoutRooms: "",
-            layoutLivingRooms: "",
-            layoutBathrooms: "",
-            hasPXMart: "",
-            address: "",
-            floor: "",
-            totalPing: "",
-            mainBuildingPing: "",
-            accessoryBuildingPing: "",
-            carParkPing: "",
-            totalAmount: "",
-            carParkPrice: "",
-            buildingAge: "",
-            mrtStation: "",
-            mrtDistance: "",
-            notes: "",
-            rating_採光: "",
-            rating_生活機能: "",
-            rating_交通: "",
-            rating_價格滿意度: "",
-            rating_未來發展潛力: "",
-            unitPrice: null,
-            indoorUsablePing: null,
-            publicAreaRatio: null,
-            totalRating: null,
-            ...formData, // 覆蓋從 CSV 讀取到的值
-          } as GeneralPropertyFormType;
-        } else {
-          // objectCategory === "community"
-          // 為 CommunityFormType 補齊所有預期屬性
-          finalFormData = {
-            area: "",
-            district: "",
-            communityName: "",
-            address: "",
-            reason: "",
-            ...formData,
-          } as CommunityFormType;
+            // 為 GeneralPropertyFormType 補齊所有預期屬性，確保類型完整
+            finalFormData = {
+                propertyName: "", area: "", district: "", otherDistrict: "", source: "", otherSource: "",
+                type: "", carParkType: "", carParkFloor: "", layoutRooms: "", layoutLivingRooms: "",
+                layoutBathrooms: "", hasPXMart: "", address: "", floor: "", totalPing: "",
+                mainBuildingPing: "", accessoryBuildingPing: "", carParkPing: "", totalAmount: "",
+                carParkPrice: "", buildingAge: "", mrtStation: "", mrtDistance: "", notes: "",
+                rating_採光: "", rating_生活機能: "", rating_交通: "", rating_價格滿意度: "",
+                rating_未來發展潛力: "", unitPrice: null, indoorUsablePing: null, publicAreaRatio: null,
+                totalRating: null,
+                ...formData // 覆蓋從 CSV 讀取到的值
+            } as GeneralPropertyFormType;
+        } else { // objectCategory === "community"
+            // 為 CommunityFormType 補齊所有預期屬性
+            finalFormData = {
+                area: "", district: "", communityName: "", address: "", reason: "",
+                ...formData
+            } as CommunityFormType;
         }
 
         // 確保 record 的 id, timestamp, objectCategory 已被設定
-        if (record.id !== undefined && record.timestamp && objectCategory) {
-          // 檢查id不為undefined
+        if (record.id !== undefined && record.timestamp && objectCategory) { // 檢查id不為undefined
           importedRecords.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -389,9 +337,7 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
             formData: finalFormData,
           });
         } else {
-          console.warn(
-            `Skipping record due to missing core data: ID=${record.id}, Timestamp=${record.timestamp}, Category=${objectCategory}. Original line: "${lines[i]}"`
-          );
+            console.warn(`Skipping record due to missing core data: ID=${record.id}, Timestamp=${record.timestamp}, Category=${objectCategory}. Original line: "${lines[i]}"`);
         }
       }
       resolve(importedRecords);
@@ -408,27 +354,26 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let inQuote = false;
-  let currentField = "";
+  let currentField = '';
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     const nextChar = line[i + 1];
 
     if (char === '"') {
-      if (inQuote && nextChar === '"') {
-        // Escaped double quote
+      if (inQuote && nextChar === '"') { // Escaped double quote
         currentField += '"';
         i++; // Skip the next quote
       } else {
         inQuote = !inQuote;
       }
-    } else if (char === "," && !inQuote) {
+    } else if (char === ',' && !inQuote) {
       result.push(currentField);
-      currentField = "";
+      currentField = '';
     } else {
       currentField += char;
     }
   }
   result.push(currentField); // Add the last field
-  return result.map((field) => field.replace(/^"|"$/g, "").replace(/""/g, '"')); // 移除首尾引號並解引用
+  return result.map(field => field.replace(/^"|"$/g, '').replace(/""/g, '"')); // 移除首尾引號並解引用
 }
