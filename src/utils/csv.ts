@@ -60,7 +60,7 @@ interface RecordType {
 // 由於 ratingCategories 在 App.tsx 中定義，需要在這裡導入才能使用
 // 假設 App.tsx 中 ratingCategories 是導出的
 // 如果 App.tsx 中沒有導出，你需要在 App.tsx 的 ratingCategories 前面加上 `export`
-import { ratingCategories } from '../App'; // 這是關鍵的導入
+import { ratingCategories } from "../App"; // 這是關鍵的導入
 
 // 映射物件欄位到 CSV 標頭
 const fieldNameMap: { [key: string]: string } = {
@@ -168,7 +168,9 @@ export const exportToCsv = (records: RecordType[]) => {
     }
   }
 
-  const headerRow = csvHeaders.map(header => `"${header.replace(/"/g, '""')}"`).join(","); // 確保標頭也被正確引用
+  const headerRow = csvHeaders
+    .map((header) => `"${header.replace(/"/g, '""')}"`)
+    .join(","); // 確保標頭也被正確引用
   const dataRows = records.map((record) => {
     const row: (string | number | null)[] = [];
     csvHeaders.forEach((header) => {
@@ -192,16 +194,20 @@ export const exportToCsv = (records: RecordType[]) => {
       } else {
         // 從 formData 中獲取值，根據 objectCategory 判斷類型
         if (record.objectCategory === "general") {
-            const generalFormData = record.formData as GeneralPropertyFormType;
-            value = generalFormData[fieldKey as keyof GeneralPropertyFormType];
+          const generalFormData = record.formData as GeneralPropertyFormType;
+          value = generalFormData[fieldKey as keyof GeneralPropertyFormType];
         } else if (record.objectCategory === "community") {
-            const communityFormData = record.formData as CommunityFormType;
-            value = communityFormData[fieldKey as keyof CommunityFormType];
+          const communityFormData = record.formData as CommunityFormType;
+          value = communityFormData[fieldKey as keyof CommunityFormType];
         }
       }
 
       // 確保將 undefined 或 null 轉換為空字串，並處理逗號
-      row.push(value === undefined || value === null || value === "" ? "" : `"${String(value).replace(/"/g, '""')}"`);
+      row.push(
+        value === undefined || value === null || value === ""
+          ? ""
+          : `"${String(value).replace(/"/g, '""')}"`
+      );
     });
     return row.join(",");
   });
@@ -228,7 +234,9 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
         return;
       }
 
-      const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+      const headers = lines[0]
+        .split(",")
+        .map((h) => h.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
       const importedRecords: RecordType[] = [];
 
       // 反向映射 CSV 標頭到英文鍵名
@@ -269,18 +277,31 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
               } else if (processedValue === "指定社區") {
                 objectCategory = "community";
               } else {
-                console.warn(`Unknown objectCategory: ${processedValue}. Attempting to infer.`);
+                console.warn(
+                  `Unknown objectCategory: ${processedValue}. Attempting to infer.`
+                );
               }
             } else {
               // 對於數字欄位嘗試轉換為數字，否則保留字串或空字串
               const numericFields = [
-                "totalPing", "mainBuildingPing", "accessoryBuildingPing", "carParkPing",
-                "totalAmount", "carParkPrice", "buildingAge", "mrtDistance",
-                "unitPrice", "indoorUsablePing", "publicAreaRatio", "totalRating"
+                "totalPing",
+                "mainBuildingPing",
+                "accessoryBuildingPing",
+                "carParkPing",
+                "totalAmount",
+                "carParkPrice",
+                "buildingAge",
+                "mrtDistance",
+                "unitPrice",
+                "indoorUsablePing",
+                "publicAreaRatio",
+                "totalRating",
               ];
               // 評分欄位也是數字，但它們是字串形式的 "1", "2"
               // 這裡使用了導入的 ratingCategories 來動態生成字段名
-              const ratingFields = ratingCategories.map((cat: string) => `rating_${cat}`); // 明確 cat 的類型
+              const ratingFields = ratingCategories.map(
+                (cat: string) => `rating_${cat}`
+              ); // 明確 cat 的類型
 
               if (numericFields.includes(fieldKey) && processedValue !== "") {
                 const numValue = parseFloat(processedValue);
@@ -290,10 +311,9 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
                   (formData as any)[fieldKey] = processedValue; // 保持為原始字串
                 }
               } else if (ratingFields.includes(fieldKey)) {
-                  // 評分欄位直接賦值，因為其值為字串 "1"~"5"
-                  (formData as any)[fieldKey] = processedValue;
-              }
-              else {
+                // 評分欄位直接賦值，因為其值為字串 "1"~"5"
+                (formData as any)[fieldKey] = processedValue;
+              } else {
                 (formData as any)[fieldKey] = processedValue;
               }
             }
@@ -302,39 +322,72 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
 
         // 確保 objectCategory 有被設定，如果沒有則嘗試推斷
         if (!objectCategory) {
-            // 如果 CSV 沒有 objectCategory 欄位或值無效，嘗試根據其他欄位推斷
-            if (formData.communityName || formData.reason) { // 如果有指定社區特有欄位
-                objectCategory = "community";
-            } else {
-                objectCategory = "general"; // 預設為一般物件
-            }
+          // 如果 CSV 沒有 objectCategory 欄位或值無效，嘗試根據其他欄位推斷
+          if (formData.communityName || formData.reason) {
+            // 如果有指定社區特有欄位
+            objectCategory = "community";
+          } else {
+            objectCategory = "general"; // 預設為一般物件
+          }
         }
 
         // 根據 objectCategory 來創建正確的 formData 結構
         let finalFormData: GeneralPropertyFormType | CommunityFormType;
         if (objectCategory === "general") {
-            // 為 GeneralPropertyFormType 補齊所有預期屬性，確保類型完整
-            finalFormData = {
-                propertyName: "", area: "", district: "", otherDistrict: "", source: "", otherSource: "",
-                type: "", carParkType: "", carParkFloor: "", layoutRooms: "", layoutLivingRooms: "",
-                layoutBathrooms: "", hasPXMart: "", address: "", floor: "", totalPing: "",
-                mainBuildingPing: "", accessoryBuildingPing: "", carParkPing: "", totalAmount: "",
-                carParkPrice: "", buildingAge: "", mrtStation: "", mrtDistance: "", notes: "",
-                rating_採光: "", rating_生活機能: "", rating_交通: "", rating_價格滿意度: "",
-                rating_未來發展潛力: "", unitPrice: null, indoorUsablePing: null, publicAreaRatio: null,
-                totalRating: null,
-                ...formData // 覆蓋從 CSV 讀取到的值
-            } as GeneralPropertyFormType;
-        } else { // objectCategory === "community"
-            // 為 CommunityFormType 補齊所有預期屬性
-            finalFormData = {
-                area: "", district: "", communityName: "", address: "", reason: "",
-                ...formData
-            } as CommunityFormType;
+          // 為 GeneralPropertyFormType 補齊所有預期屬性，確保類型完整
+          finalFormData = {
+            propertyName: "",
+            area: "",
+            district: "",
+            otherDistrict: "",
+            source: "",
+            otherSource: "",
+            type: "",
+            carParkType: "",
+            carParkFloor: "",
+            layoutRooms: "",
+            layoutLivingRooms: "",
+            layoutBathrooms: "",
+            hasPXMart: "",
+            address: "",
+            floor: "",
+            totalPing: "",
+            mainBuildingPing: "",
+            accessoryBuildingPing: "",
+            carParkPing: "",
+            totalAmount: "",
+            carParkPrice: "",
+            buildingAge: "",
+            mrtStation: "",
+            mrtDistance: "",
+            notes: "",
+            rating_採光: "",
+            rating_生活機能: "",
+            rating_交通: "",
+            rating_價格滿意度: "",
+            rating_未來發展潛力: "",
+            unitPrice: null,
+            indoorUsablePing: null,
+            publicAreaRatio: null,
+            totalRating: null,
+            ...formData, // 覆蓋從 CSV 讀取到的值
+          } as GeneralPropertyFormType;
+        } else {
+          // objectCategory === "community"
+          // 為 CommunityFormType 補齊所有預期屬性
+          finalFormData = {
+            area: "",
+            district: "",
+            communityName: "",
+            address: "",
+            reason: "",
+            ...formData,
+          } as CommunityFormType;
         }
 
         // 確保 record 的 id, timestamp, objectCategory 已被設定
-        if (record.id !== undefined && record.timestamp && objectCategory) { // 檢查id不為undefined
+        if (record.id !== undefined && record.timestamp && objectCategory) {
+          // 檢查id不為undefined
           importedRecords.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -342,24 +395,36 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
             formData: finalFormData,
           });
         } else {
-            console.warn(`Skipping record due to missing core data: ID=${record.id}, Timestamp=${record.timestamp}, Category=${objectCategory}. Original line: "${lines[i]}"`);
+          console.warn(
+            `Skipping record due to missing core data: ID=${record.id}, Timestamp=${record.timestamp}, Category=${objectCategory}. Original line: "${lines[i]}"`
+          );
         }
       }
       resolve(importedRecords);
     };
 
-    reader.onerror = (errorEvent) => { // 這裡將參數類型明確為 ProgressEvent
-      const readerError = reader.error; // 訪問 FileReader 的 error 屬性
+    reader.onerror = (errorEvent: ProgressEvent<FileReader>) => {
+      // 這裡將參數類型明確定義為 ProgressEvent
+      // const readerError = reader.error; // 訪問 FileReader 的 error 屬性 (此行可刪除或註解掉)
       let errorMessage = "未知錯誤";
-      if (readerError) {
-        if (readerError.name === "DOMException") {
-            errorMessage = `DOMException: ${readerError.message}`;
-        } else if (readerError instanceof Error) {
-            errorMessage = `Error: ${readerError.message}`;
+
+      // 直接使用 errorEvent.target.error 來獲取錯誤物件
+      const fileReaderError = (errorEvent.target as FileReader).error;
+
+      if (fileReaderError) {
+        // 檢查錯誤物件是否存在
+        if (fileReaderError.name === "DOMException") {
+          errorMessage = `DOMException: ${fileReaderError.message}`;
+        } else if (fileReaderError instanceof Error) {
+          errorMessage = `Error: ${fileReaderError.message}`;
         } else {
-            errorMessage = `讀取檔案失敗: ${String(readerError)}`;
+          errorMessage = `讀取檔案失敗: ${String(fileReaderError)}`;
         }
+      } else {
+        // 如果 errorEvent.target.error 不存在，可能是其他類型的 ProgressEvent 錯誤
+        errorMessage = `讀取檔案時發生未預期錯誤: ${errorEvent.type}`;
       }
+
       reject(new Error(errorMessage));
     };
     reader.readAsText(file, "UTF-8");
@@ -370,26 +435,27 @@ export const importFromCsv = async (file: File): Promise<RecordType[]> => {
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let inQuote = false;
-  let currentField = '';
+  let currentField = "";
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     const nextChar = line[i + 1];
 
     if (char === '"') {
-      if (inQuote && nextChar === '"') { // Escaped double quote
+      if (inQuote && nextChar === '"') {
+        // Escaped double quote
         currentField += '"';
         i++; // Skip the next quote
       } else {
         inQuote = !inQuote;
       }
-    } else if (char === ',' && !inQuote) {
+    } else if (char === "," && !inQuote) {
       result.push(currentField);
-      currentField = '';
+      currentField = "";
     } else {
       currentField += char;
     }
   }
   result.push(currentField); // Add the last field
-  return result.map(field => field.replace(/^"|"$/g, '').replace(/""/g, '"')); // 移除首尾引號並解引用
+  return result.map((field) => field.replace(/^"|"$/g, "").replace(/""/g, '"')); // 移除首尾引號並解引用
 }
