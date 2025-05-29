@@ -649,6 +649,13 @@ function App() {
       }
     }
   };
+  // 一鍵刪除所有記錄
+  const handleClearAllRecords = () => {
+    if (window.confirm("⚠️ 確定要刪除所有記錄嗎？此動作無法復原！")) {
+      setSavedRecords([]);
+      alert("✅ 所有記錄已刪除！");
+    }
+  };
 
   // 用於顯示 "顯示所有欄位與值" 細節的映射表
   const fieldNameMap: { [key: string]: string } = {
@@ -735,6 +742,30 @@ function App() {
               >
                 否 (一般物件)
               </button>
+
+              {/* ✅ 只有當有記錄時才顯示垃圾桶按鈕 */}
+              {savedRecords.length > 0 && (
+                <button
+                  className="p-2 bg-red-600 text-white rounded-full shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  title="清除所有記錄"
+                  onClick={handleClearAllRecords}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L6 9m6 9V9m6 9V9m-9 0V5.25c0-.414.336-.75.75-.75h6a.75.75 0 01.75.75V9M4.5 9h15"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         )}
