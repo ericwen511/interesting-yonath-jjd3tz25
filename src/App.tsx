@@ -113,16 +113,8 @@ const districtsByArea: { [key: string]: string[] } = {
   ],
 };
 
-const sources = ["永慶房屋", "信義房屋", "住商", "591", "樂居"];
-const propertyTypes = [
-  "預售屋",
-  "中古屋",
-  "新成屋",
-  "店面",
-  "辦公室",
-  "土地",
-  "其他",
-];
+const sources = ["永慶房屋", "信義房屋", "住商", "樂居", "其他"];
+const propertyTypes = ["預售屋", "中古屋", "新成屋", "店面", "其他"];
 const carParkTypes = ["坡道平面", "坡道機械", "升降平面", "升降機械", "無"];
 const carParkFloors = ["B1", "B2", "B3", "B4", "B5", "1F", "RF"];
 const roomOptions = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
@@ -1179,19 +1171,29 @@ function App() {
                 {savedRecords.map((record) => (
                   <div
                     key={record.id}
-                    className="p-4 border border-gray-300 rounded-md bg-white shadow-sm relative"
+                    className={`p-4 border border-gray-300 rounded-md shadow-sm relative ${
+                      record.objectCategory === "community"
+                        ? "bg-green-100"
+                        : "bg-white"
+                    }`}
                   >
                     <p className="text-sm font-bold text-gray-700 mb-2">
                       記錄 ID: {record.id} - 時間: {record.timestamp}
                     </p>
                     <p className="text-sm text-gray-800">
-                      {/* 這裡現在使用 record.objectCategory 來判斷顯示類型 */}
                       物件類型:{" "}
-                      {record.objectCategory === "general"
-                        ? "一般物件"
-                        : "指定社區"}
+                      <span
+                        className={
+                          record.objectCategory === "community"
+                            ? "text-red-600 font-bold"
+                            : ""
+                        }
+                      >
+                        {record.objectCategory === "general"
+                          ? "一般物件"
+                          : "指定社區"}
+                      </span>
                       <br />
-                      {/* 針對主要欄位進行客製化顯示 */}
                       {record.objectCategory === "general" ? (
                         <>
                           物件名稱:{" "}
@@ -1273,17 +1275,12 @@ function App() {
                       {record.formData && (
                         <details>
                           <summary className="cursor-pointer text-blue-600 hover:underline">
-                            顯示所有資料
+                            顯示詳細資料
                           </summary>
                           <div className="text-xs bg-gray-100 p-2 rounded-md mt-1 overflow-x-auto text-black">
-                            {/* 過濾並顯示所有欄位 */}
                             {Object.entries(record.formData).map(
                               ([key, value]) => {
-                                // 排除特定欄位
-                                if (fieldsToExclude.includes(key)) {
-                                  return null;
-                                }
-                                // 獲取中文名稱，如果沒有則使用英文鍵名
+                                if (fieldsToExclude.includes(key)) return null;
                                 const displayKey = fieldNameMap[key] || key;
                                 return (
                                   <p key={key} className="mb-0.5">
@@ -1302,12 +1299,11 @@ function App() {
                         </details>
                       )}
                     </p>
-                    {/* 編輯和刪除按鈕 */}
                     <div className="absolute top-4 right-4 flex space-x-2">
                       <button
                         onClick={() =>
                           handleEdit(record.id, record.objectCategory)
-                        } // 傳入新的物件類別
+                        }
                         className="px-3 py-1 bg-yellow-500 text-white text-xs rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1"
                       >
                         編輯
