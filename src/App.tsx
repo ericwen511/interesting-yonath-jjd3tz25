@@ -191,11 +191,13 @@ const calculateIndoorUsablePing = (
 const calculatePublicAreaRatio = (
   totalPing: string,
   mainBuildingPing: string,
-  accessoryBuildingPing: string
+  accessoryBuildingPing: string,
+  carParkPing: string
 ): number | null => {
   const totalPingNum = parseFloat(totalPing);
   const mainBuildingPingNum = parseFloat(mainBuildingPing);
   const accessoryBuildingPingNum = parseFloat(accessoryBuildingPing);
+  const carParkPingNum = parseFloat(carParkPing);
 
   if (
     isNaN(totalPingNum) ||
@@ -207,13 +209,17 @@ const calculatePublicAreaRatio = (
   }
 
   const indoorUsable = mainBuildingPingNum + accessoryBuildingPingNum;
-  if (indoorUsable >= totalPingNum) {
-    return 0; // 室內坪數大於總坪數，公設比為0或數據有問題
+  const adjustedTotal = isNaN(carParkPingNum)
+    ? totalPingNum
+    : totalPingNum - carParkPingNum;
+
+  if (adjustedTotal <= 0 || indoorUsable > adjustedTotal) {
+    console.warn("⚠️ 室內坪數大於(或等於)總坪數扣除車位，可能數據錯誤");
+    return 0;
   }
 
-  return parseFloat(
-    (((totalPingNum - indoorUsable) / totalPingNum) * 100).toFixed(2)
-  );
+  const ratio = 1 - indoorUsable / adjustedTotal;
+  return parseFloat((ratio * 100).toFixed(2));
 };
 
 // 用於 InputGroup 的類型
@@ -432,7 +438,8 @@ function App() {
         calculatePublicAreaRatio(
           generalPropertyForm.totalPing,
           generalPropertyForm.mainBuildingPing,
-          generalPropertyForm.accessoryBuildingPing
+          generalPropertyForm.accessoryBuildingPing,
+          generalPropertyForm.carParkPing
         )
       );
 
