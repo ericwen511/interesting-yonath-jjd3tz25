@@ -746,24 +746,30 @@ function App() {
               {/* ✅ 只有當有記錄時才顯示垃圾桶按鈕 */}
               {savedRecords.length > 0 && (
                 <button
-                  className="p-2 bg-red-600 text-white rounded-full shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  title="清除所有記錄"
+                  className="p-1 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  title="清除所有記錄" // 滑鼠懸停時顯示的提示文字
                   onClick={handleClearAllRecords}
                 >
+                                   {" "}
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+                    stroke="currentColor" // 確保路徑顏色能繼承文字顏色
+                    className="w-6 h-6 text-red-600" // 透過 Tailwind 設定圖標大小和紅色
                   >
+                                       {" "}
+                    {/* 這是正確的垃圾桶 SVG 路徑數據（來自 Heroicons） */}
+                                       {" "}
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M6 18L6 9m6 9V9m6 9V9m-9 0V5.25c0-.414.336-.75.75-.75h6a.75.75 0 01.75.75V9M4.5 9h15"
+                      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.166L15.93 2.158A1.125 1.125 0 0014.85 1.5h-3.798a1.125 1.125 0 00-1.08 6.942M5.632 7.786l-.346 9m-4.788 0L17.26 9m-9.968-3.21c-.342-.052-.682-.107-1.022-.166M19.5 5.25H4.5V19.5c0 .966.784 1.75 1.75 1.75h10.5c.966 0 1.75-.784 1.75-1.75V5.25z"
                     />
+                                     {" "}
                   </svg>
+                                 {" "}
                 </button>
               )}
             </div>
