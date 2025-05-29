@@ -1283,7 +1283,7 @@ function App() {
                       {record.formData && (
                         <details>
                           <summary className="cursor-pointer text-blue-600 hover:underline">
-                            顯示所有欄位與值
+                            顯示詳細資料
                           </summary>
                           <div className="text-xs bg-gray-100 p-2 rounded-md mt-1 overflow-x-auto text-black">
                             {Object.entries(record.formData).map(
