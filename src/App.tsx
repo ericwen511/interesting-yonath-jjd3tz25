@@ -113,16 +113,8 @@ const districtsByArea: { [key: string]: string[] } = {
   ],
 };
 
-const sources = ["房屋仲介", "售屋網站", "親友介紹", "廣告傳單", "其他"];
-const propertyTypes = [
-  "預售屋",
-  "中古屋",
-  "新成屋",
-  "店面",
-  "辦公室",
-  "土地",
-  "其他",
-];
+const sources = ["永慶房屋", "信義房屋", "住商", "樂居", "其他"];
+const propertyTypes = ["預售屋", "中古屋", "新成屋", "店面", "其他"];
 const carParkTypes = ["坡道平面", "坡道機械", "升降平面", "升降機械", "無"];
 const carParkFloors = ["B1", "B2", "B3", "B4", "B5", "1F", "RF"];
 const roomOptions = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
